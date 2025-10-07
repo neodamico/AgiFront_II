@@ -3,14 +3,15 @@
 import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { LogOut, User, CreditCard, Repeat, DollarSign, UserX } from "lucide-react"
+import { LogOut, User, CreditCard, Repeat, DollarSign, UserX, Search } from "lucide-react"
 import { CustomerRegistration } from "@/components/customer-registration"
+import { CustomerSearch } from "@/components/customer-search"
 import { AccountOpening } from "@/components/account-opening"
 import { AutoDebit } from "@/components/auto-debit"
 import { BankingTransactions } from "@/components/banking-transactions"
 import { AccountClosure } from "@/components/account-closure"
 
-type TabType = "home" | "customer" | "account" | "debit" | "transactions" | "closure"
+type TabType = "home" | "customer" | "search" | "account" | "debit" | "transactions" | "closure"
 
 export function BankingDashboard() {
   const [activeTab, setActiveTab] = useState<TabType>("home")
@@ -22,6 +23,7 @@ export function BankingDashboard() {
   const tabs = [
     { id: "home", label: "Início", icon: User },
     { id: "customer", label: "Cadastrar Cliente", icon: User },
+    { id: "search", label: "Consultar Cliente", icon: Search },
     { id: "account", label: "Abertura de Contas", icon: CreditCard },
     { id: "debit", label: "Débito Automático", icon: Repeat },
     { id: "transactions", label: "Transações", icon: DollarSign },
@@ -32,6 +34,8 @@ export function BankingDashboard() {
     switch (activeTab) {
       case "customer":
         return <CustomerRegistration />
+      case "search":
+        return <CustomerSearch />
       case "account":
         return <AccountOpening />
       case "debit":
