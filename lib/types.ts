@@ -24,6 +24,11 @@ export enum TipoEndereco {
   ALUGADO = "ALUGADO",
 }
 
+export enum StatusConta {
+  ATIVA = "ATIVA",
+  EXCLUIDA = "EXCLUIDA",
+}
+
 // ============= DTOs DE REQUEST =============
 
 export interface LoginRequest {
@@ -39,17 +44,31 @@ export interface GerenteRequest {
 }
 
 export interface ClienteRequest {
-  nome: string
+  nomeCompleto: string
   senha: string
   email: string
   cpf: string
   gerenteId?: number
-  // Telefone embutido
+  dataNascimento: string // formato: YYYY-MM-DD
+  rg: string
+  dataEmissaoDocumento: string // formato: YYYY-MM-DD
+  estadoCivil: string
+  nomeMae: string
+  nomePai?: string
+  nomeSocial?: string
+  profissao: string
+  empresaAtual: string
+  cargo: string
+  salarioMensal: number
+  tempoEmprego: number
+  patrimonioEstimado?: number
+  possuiRestricoesBancarias: boolean
+  ePpe: boolean
+  role: string
   ddi: string
   ddd: string
   numeroTelefone: string
   tipoTelefone: TipoTelefone
-  // Endereço embutido
   cep: string
   logradouro: string
   numero: string
@@ -60,8 +79,23 @@ export interface ClienteRequest {
 }
 
 export interface ClienteUpdateRequest {
-  nome?: string
+  nomeCompleto?: string
   email?: string
+  dataNascimento?: string
+  rg?: string
+  dataEmissaoDocumento?: string
+  estadoCivil?: string
+  nomeMae?: string
+  nomePai?: string
+  nomeSocial?: string
+  profissao?: string
+  empresaAtual?: string
+  cargo?: string
+  salarioMensal?: number
+  tempoEmprego?: number
+  patrimonioEstimado?: number
+  possuiRestricoesBancarias?: boolean
+  ePpe?: boolean
 }
 
 export interface EnderecoRequest {
@@ -88,7 +122,6 @@ export interface EnderecoUpdateRequest {
 export interface ContaCorrenteRequest {
   numeroConta: string
   agencia: string
-  saldo: number
   titularIds: number[]
   limiteChequeEspecial: number
 }
@@ -96,15 +129,12 @@ export interface ContaCorrenteRequest {
 export interface ContaPoupRequest {
   numeroConta: string
   agencia: string
-  saldo: number
   titularIds: number[]
-  diaAniversario: number
 }
 
 export interface ContaJovemRequest {
   numeroConta: string
   agencia: string
-  saldo: number
   titularIds: number[]
   responsavelId: number
 }
@@ -112,9 +142,7 @@ export interface ContaJovemRequest {
 export interface ContaGlobalRequest {
   numeroConta: string
   agencia: string
-  saldoDolares: number
   titularIds: number[]
-  codigoSwift: string
 }
 
 export interface ContaUpdateRequest {
@@ -134,9 +162,27 @@ export interface GerenteResponse {
 
 export interface ClienteResponse {
   id: number
-  nome: string
+  nomeCompleto: string
   email: string
   cpf: string
+  dataNascimento: string
+  rg: string
+  dataEmissaoDocumento: string
+  nomePai: string
+  nomeMae: string
+  estadoCivil: string
+  nomeSocial: string | null
+  profissao: string
+  empresaAtual: string
+  cargo: string
+  salarioMensal: number
+  tempoEmprego: number
+  patrimonioEstimado: number
+  possuiRestricoesBancarias: boolean
+  ePpe: boolean
+  role: UserRole
+  enderecos: EnderecoResponse[]
+  telefoneResponse: TelefoneResponse
 }
 
 export interface EnderecoResponse {
@@ -158,6 +204,8 @@ export interface ContaCorrenteResponse {
   saldo: number
   limiteChequeEspecial: number
   titularIds: number[]
+  statusConta: StatusConta
+  tipoConta: string
 }
 
 export interface ContaPoupResponse {
@@ -167,7 +215,9 @@ export interface ContaPoupResponse {
   saldo: number
   diaAniversario: number
   rendimento: number
+  tipoConta: string
   titularIds: number[]
+  statusConta: StatusConta
 }
 
 export interface ContaJovemResponse {
@@ -175,16 +225,22 @@ export interface ContaJovemResponse {
   numeroConta: string
   agencia: string
   saldo: number
-  responsavelTitularDTO: ResponsavelTitularDTO
+  responsavelId: number
   titularIds: number[]
+  statusConta: StatusConta
+  tipoConta: string
 }
 
 export interface ContaGlobalResponse {
   id: number
   numeroConta: string
   agencia: string
+  saldo: number
   saldoDolares: number
   codigoSwift: string
+  titularIds: number[]
+  statusConta: StatusConta
+  tipoConta: string
 }
 
 export interface ContaUpdateResponse {
@@ -226,3 +282,12 @@ export interface Endereco {
   tipoEndereco: string
   clienteId?: number
 }
+
+export interface TelefoneResponse {
+  ddi: string
+  ddd: string
+  numero: string
+  tipoTelefone: TipoTelefone
+}
+
+export type ContaResponse = ContaCorrenteResponse | ContaPoupResponse | ContaJovemResponse | ContaGlobalResponse

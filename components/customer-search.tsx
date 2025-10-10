@@ -6,8 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Search, Edit, User, Mail, FileText } from "lucide-react"
-import { clienteAPI, validarCPF, formatarCPF } from "@/lib/api"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Search, Edit, User, FileText, MapPin, Phone, Briefcase } from "lucide-react"
+import { clienteAPI, validarCPF, formatarCPF, formatarTelefone } from "@/lib/api"
 import type { ClienteResponse, ClienteUpdateRequest } from "@/lib/types"
 
 export function CustomerSearch() {
@@ -16,8 +17,23 @@ export function CustomerSearch() {
   const [loading, setLoading] = useState(false)
   const [editing, setEditing] = useState(false)
   const [editData, setEditData] = useState<ClienteUpdateRequest>({
-    nome: "",
+    nomeCompleto: "",
     email: "",
+    dataNascimento: "",
+    rg: "",
+    dataEmissaoDocumento: "",
+    estadoCivil: "",
+    nomeMae: "",
+    nomePai: "",
+    nomeSocial: "",
+    profissao: "",
+    empresaAtual: "",
+    cargo: "",
+    salarioMensal: 0,
+    tempoEmprego: 0,
+    patrimonioEstimado: 0,
+    possuiRestricoesBancarias: false,
+    ePpe: false,
   })
 
   const handleSearch = async (e: React.FormEvent) => {
@@ -32,22 +48,35 @@ export function CustomerSearch() {
 
     setLoading(true)
     try {
-      console.log("[v0] Buscando cliente por CPF:", cleanCpf)
       const clienteEncontrado = await clienteAPI.buscarPorCpf(cleanCpf)
 
       if (clienteEncontrado) {
-        console.log("[v0] Cliente encontrado:", clienteEncontrado)
         setCliente(clienteEncontrado)
         setEditData({
-          nome: clienteEncontrado.nome,
+          nomeCompleto: clienteEncontrado.nomeCompleto,
           email: clienteEncontrado.email,
+          dataNascimento: clienteEncontrado.dataNascimento,
+          rg: clienteEncontrado.rg,
+          dataEmissaoDocumento: clienteEncontrado.dataEmissaoDocumento,
+          estadoCivil: clienteEncontrado.estadoCivil,
+          nomeMae: clienteEncontrado.nomeMae,
+          nomePai: clienteEncontrado.nomePai || "",
+          nomeSocial: clienteEncontrado.nomeSocial || "",
+          profissao: clienteEncontrado.profissao,
+          empresaAtual: clienteEncontrado.empresaAtual,
+          cargo: clienteEncontrado.cargo,
+          salarioMensal: clienteEncontrado.salarioMensal,
+          tempoEmprego: clienteEncontrado.tempoEmprego,
+          patrimonioEstimado: clienteEncontrado.patrimonioEstimado,
+          possuiRestricoesBancarias: clienteEncontrado.possuiRestricoesBancarias,
+          ePpe: clienteEncontrado.ePpe,
         })
       } else {
         alert("Cliente não encontrado!")
         setCliente(null)
       }
     } catch (error) {
-      console.error("[v0] Erro ao buscar cliente:", error)
+      console.error("Erro ao buscar cliente:", error)
       alert(`Erro ao buscar cliente: ${error instanceof Error ? error.message : "Erro desconhecido"}`)
     } finally {
       setLoading(false)
@@ -61,15 +90,13 @@ export function CustomerSearch() {
 
     setLoading(true)
     try {
-      console.log("[v0] Atualizando cliente:", cliente.id, editData)
       const clienteAtualizado = await clienteAPI.atualizar(cliente.id, editData)
-      console.log("[v0] Cliente atualizado:", clienteAtualizado)
 
       setCliente(clienteAtualizado)
       setEditing(false)
       alert("Cliente atualizado com sucesso!")
     } catch (error) {
-      console.error("[v0] Erro ao atualizar cliente:", error)
+      console.error("Erro ao atualizar cliente:", error)
       alert(`Erro ao atualizar cliente: ${error instanceof Error ? error.message : "Erro desconhecido"}`)
     } finally {
       setLoading(false)
@@ -79,8 +106,23 @@ export function CustomerSearch() {
   const handleCancelEdit = () => {
     if (cliente) {
       setEditData({
-        nome: cliente.nome,
+        nomeCompleto: cliente.nomeCompleto,
         email: cliente.email,
+        dataNascimento: cliente.dataNascimento,
+        rg: cliente.rg,
+        dataEmissaoDocumento: cliente.dataEmissaoDocumento,
+        estadoCivil: cliente.estadoCivil,
+        nomeMae: cliente.nomeMae,
+        nomePai: cliente.nomePai || "",
+        nomeSocial: cliente.nomeSocial || "",
+        profissao: cliente.profissao,
+        empresaAtual: cliente.empresaAtual,
+        cargo: cliente.cargo,
+        salarioMensal: cliente.salarioMensal,
+        tempoEmprego: cliente.tempoEmprego,
+        patrimonioEstimado: cliente.patrimonioEstimado,
+        possuiRestricoesBancarias: cliente.possuiRestricoesBancarias,
+        ePpe: cliente.ePpe,
       })
     }
     setEditing(false)
@@ -142,65 +184,368 @@ export function CustomerSearch() {
           </CardHeader>
           <CardContent>
             {!editing ? (
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="form-section p-4 rounded-lg">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <FileText className="w-4 h-4 text-primary" />
+              <div className="space-y-6">
+                {/* Dados Pessoais */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-3 text-primary flex items-center space-x-2">
+                    <User className="w-5 h-5" />
+                    <span>Dados Pessoais</span>
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="form-section p-3 rounded-lg">
                       <Label className="text-sm font-semibold">ID</Label>
+                      <p className="text-base mt-1">{cliente.id}</p>
                     </div>
-                    <p className="text-lg">{cliente.id}</p>
-                  </div>
-
-                  <div className="form-section p-4 rounded-lg">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <User className="w-4 h-4 text-primary" />
-                      <Label className="text-sm font-semibold">Nome</Label>
+                    <div className="form-section p-3 rounded-lg">
+                      <Label className="text-sm font-semibold">Nome Completo</Label>
+                      <p className="text-base mt-1">{cliente.nomeCompleto}</p>
                     </div>
-                    <p className="text-lg">{cliente.nome}</p>
-                  </div>
-
-                  <div className="form-section p-4 rounded-lg">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <Mail className="w-4 h-4 text-primary" />
-                      <Label className="text-sm font-semibold">Email</Label>
+                    <div className="form-section p-3 rounded-lg">
+                      <Label className="text-sm font-semibold">Nome Social</Label>
+                      <p className="text-base mt-1">{cliente.nomeSocial || "Não informado"}</p>
                     </div>
-                    <p className="text-lg">{cliente.email}</p>
-                  </div>
-
-                  <div className="form-section p-4 rounded-lg">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <FileText className="w-4 h-4 text-primary" />
+                    <div className="form-section p-3 rounded-lg">
                       <Label className="text-sm font-semibold">CPF</Label>
+                      <p className="text-base mt-1">{formatarCPF(cliente.cpf)}</p>
                     </div>
-                    <p className="text-lg">{formatarCPF(cliente.cpf)}</p>
+                    <div className="form-section p-3 rounded-lg">
+                      <Label className="text-sm font-semibold">RG</Label>
+                      <p className="text-base mt-1">{cliente.rg}</p>
+                    </div>
+                    <div className="form-section p-3 rounded-lg">
+                      <Label className="text-sm font-semibold">Data Emissão RG</Label>
+                      <p className="text-base mt-1">{new Date(cliente.dataEmissaoDocumento).toLocaleDateString()}</p>
+                    </div>
+                    <div className="form-section p-3 rounded-lg">
+                      <Label className="text-sm font-semibold">Data de Nascimento</Label>
+                      <p className="text-base mt-1">{new Date(cliente.dataNascimento).toLocaleDateString()}</p>
+                    </div>
+                    <div className="form-section p-3 rounded-lg">
+                      <Label className="text-sm font-semibold">Estado Civil</Label>
+                      <p className="text-base mt-1">{cliente.estadoCivil}</p>
+                    </div>
+                    <div className="form-section p-3 rounded-lg">
+                      <Label className="text-sm font-semibold">Email</Label>
+                      <p className="text-base mt-1">{cliente.email}</p>
+                    </div>
+                    <div className="form-section p-3 rounded-lg">
+                      <Label className="text-sm font-semibold">Nome da Mãe</Label>
+                      <p className="text-base mt-1">{cliente.nomeMae}</p>
+                    </div>
+                    <div className="form-section p-3 rounded-lg">
+                      <Label className="text-sm font-semibold">Nome do Pai</Label>
+                      <p className="text-base mt-1">{cliente.nomePai || "Não informado"}</p>
+                    </div>
                   </div>
                 </div>
+
+                {/* Dados Profissionais */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-3 text-primary flex items-center space-x-2">
+                    <Briefcase className="w-5 h-5" />
+                    <span>Dados Profissionais</span>
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="form-section p-3 rounded-lg">
+                      <Label className="text-sm font-semibold">Profissão</Label>
+                      <p className="text-base mt-1">{cliente.profissao}</p>
+                    </div>
+                    <div className="form-section p-3 rounded-lg">
+                      <Label className="text-sm font-semibold">Empresa Atual</Label>
+                      <p className="text-base mt-1">{cliente.empresaAtual}</p>
+                    </div>
+                    <div className="form-section p-3 rounded-lg">
+                      <Label className="text-sm font-semibold">Cargo</Label>
+                      <p className="text-base mt-1">{cliente.cargo}</p>
+                    </div>
+                    <div className="form-section p-3 rounded-lg">
+                      <Label className="text-sm font-semibold">Salário Mensal</Label>
+                      <p className="text-base mt-1">
+                        R$ {cliente.salarioMensal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                    <div className="form-section p-3 rounded-lg">
+                      <Label className="text-sm font-semibold">Tempo de Emprego (meses)</Label>
+                      <p className="text-base mt-1">{cliente.tempoEmprego}</p>
+                    </div>
+                    <div className="form-section p-3 rounded-lg">
+                      <Label className="text-sm font-semibold">Patrimônio Estimado</Label>
+                      <p className="text-base mt-1">
+                        R$ {cliente.patrimonioEstimado.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Informações Bancárias */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-3 text-primary flex items-center space-x-2">
+                    <FileText className="w-5 h-5" />
+                    <span>Informações Bancárias</span>
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="form-section p-3 rounded-lg">
+                      <Label className="text-sm font-semibold">Possui Restrições Bancárias</Label>
+                      <p className="text-base mt-1">{cliente.possuiRestricoesBancarias ? "Sim" : "Não"}</p>
+                    </div>
+                    <div className="form-section p-3 rounded-lg">
+                      <Label className="text-sm font-semibold">Pessoa Politicamente Exposta (PPE)</Label>
+                      <p className="text-base mt-1">{cliente.ePpe ? "Sim" : "Não"}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Contato */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-3 text-primary flex items-center space-x-2">
+                    <Phone className="w-5 h-5" />
+                    <span>Contato</span>
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="form-section p-3 rounded-lg">
+                      <Label className="text-sm font-semibold">Telefone</Label>
+                      <p className="text-base mt-1">
+                        +{cliente.telefoneResponse.ddi}{" "}
+                        {formatarTelefone(cliente.telefoneResponse.ddd, cliente.telefoneResponse.numero)}
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-1">{cliente.telefoneResponse.tipoTelefone}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Endereços */}
+                {cliente.enderecos && cliente.enderecos.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3 text-primary flex items-center space-x-2">
+                      <MapPin className="w-5 h-5" />
+                      <span>Endereços</span>
+                    </h3>
+                    <div className="space-y-3">
+                      {cliente.enderecos.map((endereco) => (
+                        <div key={endereco.idEndereco} className="form-section p-4 rounded-lg">
+                          <div className="flex items-center justify-between mb-2">
+                            <Label className="text-sm font-semibold">{endereco.tipoEndereco}</Label>
+                          </div>
+                          <p className="text-base">
+                            {endereco.logradouro}, {endereco.numero}
+                            {endereco.complemento && ` - ${endereco.complemento}`}
+                          </p>
+                          <p className="text-base">
+                            {endereco.cidade} - {endereco.estado}
+                          </p>
+                          <p className="text-sm text-muted-foreground mt-1">CEP: {endereco.cep}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
-              <form onSubmit={handleUpdate} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="editNome">Nome *</Label>
-                    <Input
-                      id="editNome"
-                      value={editData.nome}
-                      onChange={(e) => setEditData({ ...editData, nome: e.target.value })}
-                      required
-                      disabled={loading}
-                    />
+              <form onSubmit={handleUpdate} className="space-y-6">
+                {/* Dados Pessoais */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-3 text-primary">Dados Pessoais</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="editNomeCompleto">Nome Completo *</Label>
+                      <Input
+                        id="editNomeCompleto"
+                        value={editData.nomeCompleto}
+                        onChange={(e) => setEditData({ ...editData, nomeCompleto: e.target.value })}
+                        required
+                        disabled={loading}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="editNomeSocial">Nome Social</Label>
+                      <Input
+                        id="editNomeSocial"
+                        value={editData.nomeSocial}
+                        onChange={(e) => setEditData({ ...editData, nomeSocial: e.target.value })}
+                        disabled={loading}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="editEmail">Email *</Label>
+                      <Input
+                        id="editEmail"
+                        type="email"
+                        value={editData.email}
+                        onChange={(e) => setEditData({ ...editData, email: e.target.value })}
+                        required
+                        disabled={loading}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="editDataNascimento">Data de Nascimento *</Label>
+                      <Input
+                        id="editDataNascimento"
+                        type="date"
+                        value={editData.dataNascimento}
+                        onChange={(e) => setEditData({ ...editData, dataNascimento: e.target.value })}
+                        required
+                        disabled={loading}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="editRg">RG *</Label>
+                      <Input
+                        id="editRg"
+                        value={editData.rg}
+                        onChange={(e) => setEditData({ ...editData, rg: e.target.value })}
+                        required
+                        disabled={loading}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="editDataEmissaoDocumento">Data Emissão RG *</Label>
+                      <Input
+                        id="editDataEmissaoDocumento"
+                        type="date"
+                        value={editData.dataEmissaoDocumento}
+                        onChange={(e) => setEditData({ ...editData, dataEmissaoDocumento: e.target.value })}
+                        required
+                        disabled={loading}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="editEstadoCivil">Estado Civil *</Label>
+                      <Select
+                        value={editData.estadoCivil}
+                        onValueChange={(value) => setEditData({ ...editData, estadoCivil: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="SOLTEIRO">Solteiro(a)</SelectItem>
+                          <SelectItem value="CASADO">Casado(a)</SelectItem>
+                          <SelectItem value="DIVORCIADO">Divorciado(a)</SelectItem>
+                          <SelectItem value="VIUVO">Viúvo(a)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="editNomeMae">Nome da Mãe *</Label>
+                      <Input
+                        id="editNomeMae"
+                        value={editData.nomeMae}
+                        onChange={(e) => setEditData({ ...editData, nomeMae: e.target.value })}
+                        required
+                        disabled={loading}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="editNomePai">Nome do Pai</Label>
+                      <Input
+                        id="editNomePai"
+                        value={editData.nomePai}
+                        onChange={(e) => setEditData({ ...editData, nomePai: e.target.value })}
+                        disabled={loading}
+                      />
+                    </div>
                   </div>
+                </div>
 
-                  <div>
-                    <Label htmlFor="editEmail">Email *</Label>
-                    <Input
-                      id="editEmail"
-                      type="email"
-                      value={editData.email}
-                      onChange={(e) => setEditData({ ...editData, email: e.target.value })}
-                      required
-                      disabled={loading}
-                    />
+                {/* Dados Profissionais */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-3 text-primary">Dados Profissionais</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="editProfissao">Profissão *</Label>
+                      <Input
+                        id="editProfissao"
+                        value={editData.profissao}
+                        onChange={(e) => setEditData({ ...editData, profissao: e.target.value })}
+                        required
+                        disabled={loading}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="editEmpresaAtual">Empresa Atual *</Label>
+                      <Input
+                        id="editEmpresaAtual"
+                        value={editData.empresaAtual}
+                        onChange={(e) => setEditData({ ...editData, empresaAtual: e.target.value })}
+                        required
+                        disabled={loading}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="editCargo">Cargo *</Label>
+                      <Input
+                        id="editCargo"
+                        value={editData.cargo}
+                        onChange={(e) => setEditData({ ...editData, cargo: e.target.value })}
+                        required
+                        disabled={loading}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="editSalarioMensal">Salário Mensal (R$) *</Label>
+                      <Input
+                        id="editSalarioMensal"
+                        type="number"
+                        step="0.01"
+                        value={editData.salarioMensal}
+                        onChange={(e) => setEditData({ ...editData, salarioMensal: Number.parseFloat(e.target.value) })}
+                        required
+                        disabled={loading}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="editTempoEmprego">Tempo de Emprego (meses) *</Label>
+                      <Input
+                        id="editTempoEmprego"
+                        type="number"
+                        value={editData.tempoEmprego}
+                        onChange={(e) => setEditData({ ...editData, tempoEmprego: Number.parseInt(e.target.value) })}
+                        required
+                        disabled={loading}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="editPatrimonioEstimado">Patrimônio Estimado (R$)</Label>
+                      <Input
+                        id="editPatrimonioEstimado"
+                        type="number"
+                        step="0.01"
+                        value={editData.patrimonioEstimado}
+                        onChange={(e) =>
+                          setEditData({ ...editData, patrimonioEstimado: Number.parseFloat(e.target.value) })
+                        }
+                        disabled={loading}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Informações Bancárias */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-3 text-primary">Informações Bancárias</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="editPossuiRestricoesBancarias"
+                        checked={editData.possuiRestricoesBancarias}
+                        onChange={(e) => setEditData({ ...editData, possuiRestricoesBancarias: e.target.checked })}
+                        disabled={loading}
+                        className="w-4 h-4"
+                      />
+                      <Label htmlFor="editPossuiRestricoesBancarias">Possui Restrições Bancárias</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="editEPpe"
+                        checked={editData.ePpe}
+                        onChange={(e) => setEditData({ ...editData, ePpe: e.target.checked })}
+                        disabled={loading}
+                        className="w-4 h-4"
+                      />
+                      <Label htmlFor="editEPpe">Pessoa Politicamente Exposta (PPE)</Label>
+                    </div>
                   </div>
                 </div>
 

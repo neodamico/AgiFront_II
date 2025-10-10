@@ -216,9 +216,8 @@ export const contaAPI = {
     })
   },
 
-  // Buscar conta por número
-  buscarPorNumero: async (numeroConta: string): Promise<any> => {
-    return fetchAPI<any>(`/contas/numero/${numeroConta}`, {
+  buscarPorId: async (contaId: number): Promise<any> => {
+    return fetchAPI<any>(`/contas/${contaId}`, {
       method: "GET",
     })
   },
@@ -231,8 +230,7 @@ export const contaAPI = {
     })
   },
 
-  // Deletar conta
-  deletar: async (id: number): Promise<void> => {
+  desativar: async (id: number): Promise<void> => {
     return fetchAPI<void>(`/contas/${id}`, {
       method: "DELETE",
     })

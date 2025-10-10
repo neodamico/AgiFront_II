@@ -1,39 +1,46 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { UserX, Search, AlertTriangle } from "lucide-react"
+import { contaAPI } from "@/lib/api"
 
 export function AccountClosure() {
-  const [numeroConta, setNumeroConta] = useState("")
+  const [contaId, setContaId] = useState("")
   const [accountData, setAccountData] = useState<any>(null)
   const [senha, setSenha] = useState("")
   const [canClose, setCanClose] = useState(false)
+  const [loading, setLoading] = useState(false)
 
-  const searchAccount = () => {
-    if (numeroConta) {
-      // Simulação de busca por conta
-      const mockAccount = {
-        numeroConta: numeroConta,
-        titular: "João Silva Santos",
-        tipoConta: "Conta Corrente",
-        saldo: 0.0,
-        debitosAutomaticos: 0,
-        status: "Ativa",
-      }
+  const searchAccount = async () => {
+    if (!contaId) {
+      alert("Por favor, informe o ID da conta")
+      return
+    }
 
-      setAccountData(mockAccount)
-      // Verifica se pode encerrar (saldo zerado e sem débitos)
-      setCanClose(mockAccount.saldo === 0 && mockAccount.debitosAutomaticos === 0)
+    setLoading(true)
+    try {
+      const conta = await contaAPI.buscarPorId(Number.parseInt(contaId))
+      setAccountData(conta)
+
+      const saldoZerado = (conta.saldo || conta.saldoDolares || 0) === 0
+      const contaAtiva = conta.statusConta === "ATIVA"
+      setCanClose(saldoZerado && contaAtiva)
+    } catch (error: any) {
+      console.error("Erro ao buscar conta:", error)
+      alert(`Erro ao buscar conta: ${error.message}`)
+      setAccountData(null)
+      setCanClose(false)
+    } finally {
+      setLoading(false)
     }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!accountData || !senha) {
       alert("Por favor, preencha todos os campos obrigatórios")
@@ -41,18 +48,33 @@ export function AccountClosure() {
     }
 
     if (!canClose) {
-      alert(
-        "Não é possível encerrar a conta. Verifique se o saldo está zerado e não há débitos automáticos cadastrados.",
-      )
+      alert("Não é possível encerrar a conta. Verifique se o saldo está zerado e a conta está ativa.")
       return
     }
 
-    alert(`Conta ${accountData.numeroConta} encerrada com sucesso!`)
-    // Reset
-    setNumeroConta("")
-    setAccountData(null)
-    setSenha("")
-    setCanClose(false)
+    setLoading(true)
+    try {
+      await contaAPI.desativar(accountData.id)
+      alert(`Conta ${accountData.numeroConta} encerrada com sucesso! Status alterado para EXCLUIDA.`)
+
+      // Reset
+      setContaId("")
+      setAccountData(null)
+      setSenha("")
+      setCanClose(false)
+    } catch (error: any) {
+      console.error("Erro ao encerrar conta:", error)
+      alert(`Erro ao encerrar conta: ${error.message}`)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const formatarSaldo = (valor: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(valor)
   }
 
   return (
@@ -69,16 +91,17 @@ export function AccountClosure() {
           <h3 className="text-lg font-semibold mb-4 text-primary">Buscar Conta</h3>
           <div className="flex space-x-4">
             <div className="flex-1">
-              <Label htmlFor="numeroConta">Número da Conta</Label>
+              <Label htmlFor="contaId">ID da Conta</Label>
               <Input
-                id="numeroConta"
-                value={numeroConta}
-                onChange={(e) => setNumeroConta(e.target.value)}
-                placeholder="000000"
+                id="contaId"
+                type="number"
+                value={contaId}
+                onChange={(e) => setContaId(e.target.value)}
+                placeholder="123"
               />
             </div>
             <div className="flex items-end">
-              <Button onClick={searchAccount} className="flex items-center space-x-2">
+              <Button onClick={searchAccount} disabled={loading} className="flex items-center space-x-2">
                 <Search className="w-4 h-4" />
                 <span>Buscar</span>
               </Button>
@@ -96,32 +119,34 @@ export function AccountClosure() {
                 <Input value={accountData.numeroConta} disabled />
               </div>
               <div>
-                <Label>Titular</Label>
-                <Input value={accountData.titular} disabled />
+                <Label>Agência</Label>
+                <Input value={accountData.agencia} disabled />
               </div>
               <div>
                 <Label>Tipo de Conta</Label>
-                <Input value={accountData.tipoConta} disabled />
+                <Input value={accountData.tipoConta || "N/A"} disabled />
               </div>
               <div>
                 <Label>Saldo Atual</Label>
                 <Input
-                  value={`R$ ${accountData.saldo.toFixed(2)}`}
+                  value={formatarSaldo(accountData.saldo || accountData.saldoDolares || 0)}
                   disabled
-                  className={accountData.saldo === 0 ? "text-success" : "text-destructive"}
-                />
-              </div>
-              <div>
-                <Label>Débitos Automáticos</Label>
-                <Input
-                  value={accountData.debitosAutomaticos}
-                  disabled
-                  className={accountData.debitosAutomaticos === 0 ? "text-success" : "text-destructive"}
+                  className={
+                    (accountData.saldo || accountData.saldoDolares || 0) === 0 ? "text-green-600" : "text-red-600"
+                  }
                 />
               </div>
               <div>
                 <Label>Status</Label>
-                <Input value={accountData.status} disabled />
+                <Input
+                  value={accountData.statusConta || "N/A"}
+                  disabled
+                  className={accountData.statusConta === "ATIVA" ? "text-green-600" : "text-red-600"}
+                />
+              </div>
+              <div>
+                <Label>Titulares</Label>
+                <Input value={accountData.titularIds?.length || 0} disabled />
               </div>
             </div>
           </div>
@@ -130,25 +155,31 @@ export function AccountClosure() {
         {/* Verificação de Encerramento */}
         {accountData && (
           <div
-            className={`p-4 rounded-lg border ${canClose ? "bg-success/10 border-success" : "bg-destructive/10 border-destructive"}`}
+            className={`p-4 rounded-lg border ${canClose ? "bg-green-50 border-green-500" : "bg-red-50 border-red-500"}`}
           >
             <div className="flex items-center space-x-2 mb-2">
-              <AlertTriangle className={`w-5 h-5 ${canClose ? "text-success" : "text-destructive"}`} />
-              <h4 className={`font-semibold ${canClose ? "text-success" : "text-destructive"}`}>
+              <AlertTriangle className={`w-5 h-5 ${canClose ? "text-green-600" : "text-red-600"}`} />
+              <h4 className={`font-semibold ${canClose ? "text-green-600" : "text-red-600"}`}>
                 {canClose ? "Conta pode ser encerrada" : "Conta não pode ser encerrada"}
               </h4>
             </div>
             <div className="text-sm space-y-1">
-              <p className={accountData.saldo === 0 ? "text-success" : "text-destructive"}>
-                ✓ Saldo zerado: {accountData.saldo === 0 ? "Sim" : "Não"}
+              <p
+                className={
+                  (accountData.saldo || accountData.saldoDolares || 0) === 0 ? "text-green-600" : "text-red-600"
+                }
+              >
+                {(accountData.saldo || accountData.saldoDolares || 0) === 0 ? "✓" : "✗"} Saldo zerado:{" "}
+                {(accountData.saldo || accountData.saldoDolares || 0) === 0 ? "Sim" : "Não"}
               </p>
-              <p className={accountData.debitosAutomaticos === 0 ? "text-success" : "text-destructive"}>
-                ✓ Sem débitos automáticos: {accountData.debitosAutomaticos === 0 ? "Sim" : "Não"}
+              <p className={accountData.statusConta === "ATIVA" ? "text-green-600" : "text-red-600"}>
+                {accountData.statusConta === "ATIVA" ? "✓" : "✗"} Conta ativa:{" "}
+                {accountData.statusConta === "ATIVA" ? "Sim" : "Não"}
               </p>
             </div>
             {!canClose && (
-              <p className="text-destructive text-sm mt-2">
-                Para encerrar a conta, é necessário zerar o saldo e cancelar todos os débitos automáticos.
+              <p className="text-red-600 text-sm mt-2">
+                Para encerrar a conta, é necessário zerar o saldo e a conta deve estar ativa.
               </p>
             )}
           </div>
@@ -170,6 +201,9 @@ export function AccountClosure() {
                   required
                 />
               </div>
+              <p className="text-sm text-muted-foreground mt-2">
+                Ao encerrar a conta, o status será alterado para EXCLUIDA mas os dados permanecerão no banco de dados.
+              </p>
             </div>
 
             <div className="flex justify-end space-x-4 mt-6">
@@ -177,7 +211,7 @@ export function AccountClosure() {
                 type="button"
                 variant="outline"
                 onClick={() => {
-                  setNumeroConta("")
+                  setContaId("")
                   setAccountData(null)
                   setSenha("")
                   setCanClose(false)
@@ -185,8 +219,8 @@ export function AccountClosure() {
               >
                 Cancelar
               </Button>
-              <Button type="submit" variant="destructive">
-                Encerrar Conta
+              <Button type="submit" disabled={loading} variant="destructive">
+                {loading ? "Encerrando..." : "Encerrar Conta"}
               </Button>
             </div>
           </form>

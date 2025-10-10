@@ -18,6 +18,7 @@ export function CustomerRegistration() {
     nome: "",
     sobrenome: "",
     dataNascimento: "",
+    dataEmissaoDocumento: "",
     sexo: "",
     tipoDocumento: "",
     numeroDocumento: "",
@@ -115,18 +116,38 @@ export function CustomerRegistration() {
 
       const gerenteId = localStorage.getItem("gerenteId")
 
+      if (!gerenteId) {
+        alert("Erro: Gerente não identificado. Por favor, faça login novamente.")
+        setLoading(false)
+        return
+      }
+
       const clienteData: ClienteRequest = {
-        nome: `${formData.nome} ${formData.sobrenome}`,
+        nomeCompleto: `${formData.nome} ${formData.sobrenome}`,
         senha: formData.senha || "senha123",
         email: formData.email,
         cpf: formData.cpf.replace(/\D/g, ""),
-        gerenteId: gerenteId ? Number(gerenteId) : undefined,
-        // Telefone embutido no ClienteRequest
+        gerenteId: Number(gerenteId),
+        dataNascimento: formData.dataNascimento,
+        dataEmissaoDocumento: formData.dataEmissaoDocumento,
+        rg: formData.numeroDocumento,
+        estadoCivil: formData.estadoCivil.toUpperCase(),
+        nomeMae: formData.nomeMae,
+        nomePai: formData.nomePai || "",
+        nomeSocial: formData.nomeSocial || "",
+        profissao: formData.profissao,
+        empresaAtual: formData.empresaAtual,
+        cargo: formData.cargo,
+        salarioMensal: Number(formData.salarioMensal),
+        tempoEmprego: Number(formData.tempoEmprego),
+        patrimonioEstimado: formData.patrimonioEstimado ? Number(formData.patrimonioEstimado) : 0,
+        possuiRestricoesBancarias: formData.restricoesBancarias,
+        ePpe: formData.ppe,
+        role: "CLIENTE",
         ddi: formData.ddi,
         ddd: formData.ddd,
         numeroTelefone: formData.numeroTelefone,
         tipoTelefone: formData.tipoTelefone.toUpperCase() as TipoTelefone,
-        // Endereço embutido no ClienteRequest
         cep: formData.cep.replace(/\D/g, ""),
         logradouro: formData.logradouro,
         numero: formData.numero,
@@ -142,11 +163,11 @@ export function CustomerRegistration() {
 
       alert(`Cliente cadastrado com sucesso! ID: ${clienteResponse.id}`)
 
-      // Reset form
       setFormData({
         nome: "",
         sobrenome: "",
         dataNascimento: "",
+        dataEmissaoDocumento: "",
         sexo: "",
         tipoDocumento: "",
         numeroDocumento: "",
@@ -183,7 +204,8 @@ export function CustomerRegistration() {
       setCpfValid(null)
     } catch (error) {
       console.error("[v0] Erro ao cadastrar cliente:", error)
-      alert(`Erro ao cadastrar cliente: ${error instanceof Error ? error.message : "Erro desconhecido"}`)
+      const errorMessage = error instanceof Error ? error.message : "Erro desconhecido"
+      alert(`Erro ao cadastrar cliente: ${errorMessage}`)
     } finally {
       setLoading(false)
     }
@@ -231,6 +253,17 @@ export function CustomerRegistration() {
                     type="date"
                     value={formData.dataNascimento}
                     onChange={(e) => setFormData({ ...formData, dataNascimento: e.target.value })}
+                    required
+                    disabled={loading}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="dataEmissaoDocumento">Data de Emissão do Documento *</Label>
+                  <Input
+                    id="dataEmissaoDocumento"
+                    type="date"
+                    value={formData.dataEmissaoDocumento}
+                    onChange={(e) => setFormData({ ...formData, dataEmissaoDocumento: e.target.value })}
                     required
                     disabled={loading}
                   />
