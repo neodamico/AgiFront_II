@@ -11,12 +11,11 @@ export enum TipoTelefone {
 }
 
 export enum TipoTransacao {
-  SAQUE = "SAQUE",
   DEPOSITO = "DEPOSITO",
+  SAQUE = "SAQUE",
   TRANSFERENCIA = "TRANSFERENCIA",
-  SAQUE_INTERNACIONAL = "SAQUE_INTERNACIONAL",
-  DEPOSITO_INTERNACIONAL = "DEPOSITO_INTERNACIONAL",
-  TRANSFERENCIA_INTERNACIONAL = "TRANSFERENCIA_INTERNACIONAL",
+  TRANSFERENCIA_ENVIADA = "TRANSFERENCIA_ENVIADA",
+  TRANSFERENCIA_RECEBIDA = "TRANSFERENCIA_RECEBIDA",
 }
 
 export enum TipoEndereco {
@@ -27,6 +26,28 @@ export enum TipoEndereco {
 export enum StatusConta {
   ATIVA = "ATIVA",
   EXCLUIDA = "EXCLUIDA",
+}
+
+export enum SegmentoCliente {
+  CLASS = "CLASS",
+  ADVANCED = "ADVANCED",
+  PREMIUM = "PREMIUM",
+}
+
+export enum StatusDebito {
+  ATIVO = "ATIVO",
+  SUSPENSO = "SUSPENSO",
+  CANCELADO = "CANCELADO",
+  ERRO_PROCESSAMENTO = "ERRO_PROCESSAMENTO",
+}
+
+export enum TipoServico {
+  ENERGIA = "ENERGIA",
+  AGUA_SANEAMENTO = "AGUA_SANEAMENTO",
+  TELEFONIA_FIXA_MOVEL = "TELEFONIA_FIXA_MOVEL",
+  INTERNET_TV = "INTERNET_TV",
+  IPVA = "IPVA",
+  OUTROS = "OUTROS",
 }
 
 // ============= DTOs DE REQUEST =============
@@ -73,20 +94,23 @@ export interface ClienteRequest {
   logradouro: string
   numero: string
   complemento?: string
+  bairro: string
   cidade: string
   uf: string
   tipoEndereco: string
 }
 
 export interface ClienteUpdateRequest {
+  id?: number
   nomeCompleto?: string
   email?: string
+  cpf?: string
   dataNascimento?: string
   rg?: string
   dataEmissaoDocumento?: string
-  estadoCivil?: string
-  nomeMae?: string
   nomePai?: string
+  nomeMae?: string
+  estadoCivil?: string
   nomeSocial?: string
   profissao?: string
   empresaAtual?: string
@@ -96,6 +120,9 @@ export interface ClienteUpdateRequest {
   patrimonioEstimado?: number
   possuiRestricoesBancarias?: boolean
   ePpe?: boolean
+  role?: UserRole
+  enderecos?: EnderecoResponse[]
+  telefoneResponse?: TelefoneResponse
 }
 
 export interface EnderecoRequest {
@@ -103,6 +130,7 @@ export interface EnderecoRequest {
   logradouro: string
   numero: string
   complemento?: string
+  bairro: string
   cidade: string
   estado: string
   tipoEndereco: string
@@ -114,41 +142,73 @@ export interface EnderecoUpdateRequest {
   logradouro?: string
   numero?: string
   complemento?: string
+  bairro?: string
   cidade?: string
   estado?: string
   tipoEndereco?: string
 }
 
 export interface ContaCorrenteRequest {
-  numeroConta: string
   agencia: string
-  titularIds: number[]
-  limiteChequeEspecial: number
+  titularCpfs: string[]
+  senha: string
+  limiteChequeEspecial?: number
 }
 
 export interface ContaPoupRequest {
-  numeroConta: string
   agencia: string
-  titularIds: number[]
+  titularCpfs: string[]
+  senha: string
 }
 
 export interface ContaJovemRequest {
-  numeroConta: string
   agencia: string
-  titularIds: number[]
+  titularCpfs: string[]
+  senha: string
   responsavelId: number
 }
 
 export interface ContaGlobalRequest {
-  numeroConta: string
   agencia: string
-  titularIds: number[]
+  titularCpfs: string[]
+  senha: string
 }
 
 export interface ContaUpdateRequest {
   numeroConta?: string
   agencia?: string
   cpf: string
+}
+
+export interface TransferenciaRequest {
+  contaOrigemId: number
+  contaDestinoId: number
+  valor: number
+  senha: string
+  motivoMovimentacao?: string
+}
+
+export interface DepositoRequest {
+  contaId: number
+  valor: number
+  senha: string
+  motivoMovimentacao?: string
+}
+
+export interface SaqueRequest {
+  contaId: number
+  valor: number
+  senha: string
+  motivoMovimentacao?: string
+}
+
+export interface DebitoAutomaticoRequest {
+  contaId: number
+  diaAgendado: number // 1-28
+  tipoServico: TipoServico
+  frequencia: "SEMANAL" | "MENSAL" | "ANUAL"
+  identificadorConvenio: string
+  descricao?: string
 }
 
 // ============= DTOs DE RESPONSE =============
@@ -191,6 +251,7 @@ export interface EnderecoResponse {
   logradouro: string
   numero: string
   complemento: string
+  bairro: string
   cidade: string
   estado: string
   tipoEndereco: string
@@ -203,7 +264,7 @@ export interface ContaCorrenteResponse {
   agencia: string
   saldo: number
   limiteChequeEspecial: number
-  titularIds: number[]
+  titularCpfs: string[]
   statusConta: StatusConta
   tipoConta: string
 }
@@ -216,8 +277,9 @@ export interface ContaPoupResponse {
   diaAniversario: number
   rendimento: number
   tipoConta: string
-  titularIds: number[]
+  titularCpfs: string[]
   statusConta: StatusConta
+  segmentoCliente?: SegmentoCliente
 }
 
 export interface ContaJovemResponse {
@@ -226,7 +288,7 @@ export interface ContaJovemResponse {
   agencia: string
   saldo: number
   responsavelId: number
-  titularIds: number[]
+  titularCpfs: string[]
   statusConta: StatusConta
   tipoConta: string
 }
@@ -236,15 +298,41 @@ export interface ContaGlobalResponse {
   numeroConta: string
   agencia: string
   saldo: number
-  saldoDolares: number
+  saldoDolar: number
   codigoSwift: string
-  titularIds: number[]
+  titularCpfs: string[]
   statusConta: StatusConta
   tipoConta: string
 }
 
 export interface ContaUpdateResponse {
   agencia: string
+}
+
+export interface TransacaoResponse {
+  id: number
+  nsUnico: string
+  tipo: TipoTransacao
+  valor: number
+  dataHora: string
+  contaOrigemId?: number
+  numeroContaOrigem?: string
+  contaDestinoId?: number
+  numeroContaDestino?: string
+  gerenteExecutorId: number
+  nomeGerenteExecutor: string
+  motivoMovimentacao?: string
+}
+
+export interface DebitoAutomaticoResponse {
+  id: number
+  contaId: number
+  diaAgendado: number
+  frequencia: string
+  tipoServico: string
+  status: string
+  identificadorConvenio: string
+  descricao: string
 }
 
 export interface ResponsavelTitularDTO {
@@ -277,6 +365,7 @@ export interface Endereco {
   logradouro: string
   numero: string
   complemento: string
+  bairro: string
   cidade: string
   estado: string
   tipoEndereco: string
@@ -291,3 +380,15 @@ export interface TelefoneResponse {
 }
 
 export type ContaResponse = ContaCorrenteResponse | ContaPoupResponse | ContaJovemResponse | ContaGlobalResponse
+
+export interface ExchangeRateResponse {
+  result: string
+  documentation: string
+  terms_of_use: string
+  time_last_update_unix: number
+  time_last_update_utc: string
+  time_next_update_unix: number
+  time_next_update_utc: string
+  base_code: string
+  conversion_rates: Record<string, number>
+}

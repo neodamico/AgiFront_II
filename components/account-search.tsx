@@ -34,7 +34,7 @@ export function AccountSearch() {
         return
       }
 
-      setClienteNome(cliente.nome)
+      setClienteNome(cliente.nomeCompleto)
 
       // Buscar todas as contas do cliente
       // Por enquanto, vamos simular já que não temos endpoint específico

@@ -36,9 +36,10 @@ export default function LoginPage() {
       console.log("[v0] Resposta do login:", response)
 
       if (response && response.gerenteId) {
-        setIsLoggedIn(true)
         localStorage.setItem("gerenteId", String(response.gerenteId))
         localStorage.setItem("gerenteNome", response.nome)
+        console.log("[v0] Gerente logado - ID:", response.gerenteId, "Nome:", response.nome)
+        setIsLoggedIn(true)
       } else {
         setError("ID do gerente ou senha incorretos")
       }
@@ -98,8 +99,10 @@ export default function LoginPage() {
             </Button>
           </form>
           <div className="mt-6 text-center text-xs text-muted-foreground">
-            <p>Credenciais de teste: ID 1 / Senha 123456</p>
-            <p className="mt-2 text-amber-600">Certifique-se de que o backend está rodando em http://localhost:8080</p>
+            <p className="text-amber-600 font-medium">
+              Importante: Certifique-se de que existe um gerente cadastrado no banco de dados antes de fazer login.
+            </p>
+            <p className="mt-2">Backend deve estar rodando em http://localhost:8080</p>
           </div>
         </CardContent>
       </Card>

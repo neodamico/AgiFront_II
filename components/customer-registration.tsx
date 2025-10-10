@@ -48,6 +48,7 @@ export function CustomerRegistration() {
     logradouro: "",
     numero: "",
     complemento: "",
+    bairro: "",
     cidade: "",
     estado: "",
     tipoEndereco: "",
@@ -89,6 +90,7 @@ export function CustomerRegistration() {
             ...formData,
             cep: value,
             logradouro: response.logradouro || "",
+            bairro: response.bairro || "",
             cidade: response.localidade || "",
             estado: response.uf || "",
           })
@@ -152,6 +154,7 @@ export function CustomerRegistration() {
         logradouro: formData.logradouro,
         numero: formData.numero,
         complemento: formData.complemento,
+        bairro: formData.bairro,
         cidade: formData.cidade,
         uf: formData.estado,
         tipoEndereco: formData.tipoEndereco.toUpperCase(),
@@ -193,6 +196,7 @@ export function CustomerRegistration() {
         logradouro: "",
         numero: "",
         complemento: "",
+        bairro: "",
         cidade: "",
         estado: "",
         tipoEndereco: "",
@@ -568,6 +572,16 @@ export function CustomerRegistration() {
                     id="complemento"
                     value={formData.complemento}
                     onChange={(e) => setFormData({ ...formData, complemento: e.target.value })}
+                    disabled={loading}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="bairro">Bairro *</Label>
+                  <Input
+                    id="bairro"
+                    value={formData.bairro}
+                    onChange={(e) => setFormData({ ...formData, bairro: e.target.value })}
+                    required
                     disabled={loading}
                   />
                 </div>

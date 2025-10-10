@@ -19,10 +19,9 @@ export function AccountOpening() {
   const [loading, setLoading] = useState(false)
 
   const [contaData, setContaData] = useState({
-    numeroConta: "",
     agencia: "0001",
+    senha: "",
     limiteChequeEspecial: "",
-    codigoSwift: "",
     responsavelId: "",
   })
 
@@ -42,11 +41,6 @@ export function AccountOpening() {
       const cliente = await clienteAPI.buscarPorCpf(cpf.replace(/\D/g, ""))
       if (cliente) {
         setClientes([cliente])
-        // Gerar número de conta automaticamente
-        const numeroConta = Math.floor(Math.random() * 1000000)
-          .toString()
-          .padStart(8, "0")
-        setContaData({ ...contaData, numeroConta })
       } else {
         alert("Cliente não encontrado")
       }
@@ -111,9 +105,14 @@ export function AccountOpening() {
       return
     }
 
+    if (!contaData.senha || contaData.senha.length < 6) {
+      alert("Informe uma senha com pelo menos 6 caracteres")
+      return
+    }
+
     setLoading(true)
     try {
-      const titularIds = clientes.map((c) => c.id)
+      const titularCpfs = clientes.map((c) => c.cpf)
 
       switch (tipoConta) {
         case "corrente":
@@ -121,20 +120,22 @@ export function AccountOpening() {
             alert("Informe o limite do cheque especial")
             return
           }
-          await contaAPI.criarContaCorrente({
-            numeroConta: contaData.numeroConta,
+          const contaCorrente = await contaAPI.criarContaCorrente({
             agencia: contaData.agencia,
-            titularIds,
+            titularCpfs,
+            senha: contaData.senha,
             limiteChequeEspecial: Number.parseFloat(contaData.limiteChequeEspecial),
           })
+          alert(`Conta Corrente ${contaCorrente.numeroConta} criada com sucesso!`)
           break
 
         case "poupanca":
-          await contaAPI.criarContaPoupanca({
-            numeroConta: contaData.numeroConta,
+          const contaPoupanca = await contaAPI.criarContaPoupanca({
             agencia: contaData.agencia,
-            titularIds,
+            titularCpfs,
+            senha: contaData.senha,
           })
+          alert(`Conta Poupança ${contaPoupanca.numeroConta} criada com sucesso!`)
           break
 
         case "jovem":
@@ -142,38 +143,34 @@ export function AccountOpening() {
             alert("Informe o ID da conta do responsável")
             return
           }
-          await contaAPI.criarContaJovem({
-            numeroConta: contaData.numeroConta,
+          const contaJovem = await contaAPI.criarContaJovem({
             agencia: contaData.agencia,
-            titularIds,
+            titularCpfs,
+            senha: contaData.senha,
             responsavelId: Number.parseInt(contaData.responsavelId),
           })
+          alert(`Conta Jovem ${contaJovem.numeroConta} criada com sucesso!`)
           break
 
         case "global":
-          if (!contaData.codigoSwift) {
-            alert("Informe o código SWIFT")
-            return
-          }
-          await contaAPI.criarContaGlobal({
-            numeroConta: contaData.numeroConta,
+          const contaGlobal = await contaAPI.criarContaGlobal({
             agencia: contaData.agencia,
-            titularIds,
+            titularCpfs,
+            senha: contaData.senha,
           })
+          alert(`Conta Internacional ${contaGlobal.numeroConta} criada com sucesso!`)
           break
       }
 
-      alert(`Conta ${contaData.numeroConta} criada com sucesso!`)
       // Reset
       setCpf("")
       setCpfConjuge("")
       setClientes([])
       setTipoConta("")
       setContaData({
-        numeroConta: "",
         agencia: "0001",
+        senha: "",
         limiteChequeEspecial: "",
-        codigoSwift: "",
         responsavelId: "",
       })
     } catch (error: any) {
@@ -265,15 +262,12 @@ export function AccountOpening() {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <Label htmlFor="numeroConta">Número da Conta</Label>
-                  <Input id="numeroConta" value={contaData.numeroConta} disabled className="bg-muted" />
-                </div>
-                <div>
-                  <Label htmlFor="agencia">Agência</Label>
+                  <Label htmlFor="agencia">Agência *</Label>
                   <Input
                     id="agencia"
                     value={contaData.agencia}
                     onChange={(e) => setContaData({ ...contaData, agencia: e.target.value })}
+                    required
                   />
                 </div>
                 <div>
@@ -290,12 +284,24 @@ export function AccountOpening() {
                     </SelectContent>
                   </Select>
                 </div>
+                <div>
+                  <Label htmlFor="senha">Senha da Conta *</Label>
+                  <Input
+                    id="senha"
+                    type="password"
+                    value={contaData.senha}
+                    onChange={(e) => setContaData({ ...contaData, senha: e.target.value })}
+                    placeholder="Mínimo 6 caracteres"
+                    minLength={6}
+                    required
+                  />
+                </div>
               </div>
 
               {/* Campos específicos por tipo de conta */}
               {tipoConta === "corrente" && (
                 <div>
-                  <Label htmlFor="limiteChequeEspecial">Limite Cheque Especial (R$) *</Label>
+                  <Label htmlFor="limiteChequeEspecial">Limite Cheque Especial (R$)</Label>
                   <Input
                     id="limiteChequeEspecial"
                     type="number"
@@ -316,19 +322,7 @@ export function AccountOpening() {
                     value={contaData.responsavelId}
                     onChange={(e) => setContaData({ ...contaData, responsavelId: e.target.value })}
                     placeholder="ID da conta do responsável"
-                  />
-                </div>
-              )}
-
-              {tipoConta === "global" && (
-                <div>
-                  <Label htmlFor="codigoSwift">Código SWIFT *</Label>
-                  <Input
-                    id="codigoSwift"
-                    value={contaData.codigoSwift}
-                    onChange={(e) => setContaData({ ...contaData, codigoSwift: e.target.value.toUpperCase() })}
-                    placeholder="ABCDUS33XXX"
-                    maxLength={11}
+                    required
                   />
                 </div>
               )}
@@ -344,10 +338,9 @@ export function AccountOpening() {
                   setClientes([])
                   setTipoConta("")
                   setContaData({
-                    numeroConta: "",
                     agencia: "0001",
+                    senha: "",
                     limiteChequeEspecial: "",
-                    codigoSwift: "",
                     responsavelId: "",
                   })
                 }}

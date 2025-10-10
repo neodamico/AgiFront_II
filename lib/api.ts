@@ -19,6 +19,12 @@ import type {
   ContaGlobalResponse,
   ContaUpdateRequest,
   ContaUpdateResponse,
+  TransferenciaRequest,
+  TransacaoResponse,
+  DepositoRequest,
+  SaqueRequest,
+  DebitoAutomaticoRequest,
+  DebitoAutomaticoResponse,
 } from "./types"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1"
@@ -216,8 +222,20 @@ export const contaAPI = {
     })
   },
 
+  listarTodas: async (): Promise<any[]> => {
+    return fetchAPI<any[]>("/contas", {
+      method: "GET",
+    })
+  },
+
   buscarPorId: async (contaId: number): Promise<any> => {
     return fetchAPI<any>(`/contas/${contaId}`, {
+      method: "GET",
+    })
+  },
+
+  buscarPorNumeroConta: async (numeroConta: string): Promise<any> => {
+    return fetchAPI<any>(`/contas/buscar-numero/${numeroConta}`, {
       method: "GET",
     })
   },
@@ -230,9 +248,67 @@ export const contaAPI = {
     })
   },
 
-  desativar: async (id: number): Promise<void> => {
-    return fetchAPI<void>(`/contas/${id}`, {
-      method: "DELETE",
+  desativar: async (numeroConta: string): Promise<any> => {
+    return fetchAPI<any>(`/contas/desativar/${numeroConta}`, {
+      method: "PUT",
+    })
+  },
+}
+
+// ============= TRANSAÇÃO API =============
+export const transacaoAPI = {
+  realizarTransferencia: async (data: TransferenciaRequest, gerenteExecutorId: number): Promise<TransacaoResponse> => {
+    return fetchAPI<TransacaoResponse>(`/transacoes/transferencia?gerenteExecutorId=${gerenteExecutorId}`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    })
+  },
+
+  realizarDeposito: async (data: DepositoRequest, gerenteExecutorId: number): Promise<TransacaoResponse> => {
+    return fetchAPI<TransacaoResponse>(`/transacoes/deposito?gerenteExecutorId=${gerenteExecutorId}`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    })
+  },
+
+  realizarSaque: async (data: SaqueRequest, gerenteExecutorId: number): Promise<TransacaoResponse> => {
+    return fetchAPI<TransacaoResponse>(`/transacoes/saque?gerenteExecutorId=${gerenteExecutorId}`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    })
+  },
+
+  buscarExtrato: async (contaId: number): Promise<TransacaoResponse[]> => {
+    return fetchAPI<TransacaoResponse[]>(`/transacoes/extrato/${contaId}`, {
+      method: "GET",
+    })
+  },
+}
+
+// ============= DÉBITO AUTOMÁTICO API =============
+export const debitoAutomaticoAPI = {
+  criar: async (data: DebitoAutomaticoRequest): Promise<DebitoAutomaticoResponse> => {
+    return fetchAPI<DebitoAutomaticoResponse>("/debitos-automaticos", {
+      method: "POST",
+      body: JSON.stringify(data),
+    })
+  },
+
+  listarTodos: async (): Promise<DebitoAutomaticoResponse[]> => {
+    return fetchAPI<DebitoAutomaticoResponse[]>("/debitos-automaticos", {
+      method: "GET",
+    })
+  },
+
+  buscarPorId: async (id: number): Promise<DebitoAutomaticoResponse> => {
+    return fetchAPI<DebitoAutomaticoResponse>(`/debitos-automaticos/${id}`, {
+      method: "GET",
+    })
+  },
+
+  cancelar: async (id: number): Promise<DebitoAutomaticoResponse> => {
+    return fetchAPI<DebitoAutomaticoResponse>(`/debitos-automaticos/cancelar/${id}`, {
+      method: "PATCH",
     })
   },
 }
@@ -284,4 +360,13 @@ export function formatarTelefone(ddd: string, numero: string): string {
 export function formatarCEP(cep: string): string {
   const cleanCEP = cep.replace(/\D/g, "")
   return cleanCEP.replace(/(\d{5})(\d{3})/, "$1-$2")
+}
+
+export const api = {
+  gerentes: gerenteAPI,
+  clientes: clienteAPI,
+  enderecos: enderecoAPI,
+  contas: contaAPI,
+  transacoes: transacaoAPI,
+  debitosAutomaticos: debitoAutomaticoAPI,
 }
