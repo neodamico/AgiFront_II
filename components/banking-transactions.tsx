@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { DollarSign, FileText } from "lucide-react"
-import { api } from "@/lib/api"
+import { api, formatarNumeroConta } from "@/lib/api"
 import type { TransacaoResponse } from "@/lib/types"
 
 export function BankingTransactions() {
@@ -16,9 +16,9 @@ export function BankingTransactions() {
     tipoTransacao: "",
     numeroConta: "",
     valor: "",
+    senha:"",
     numeroContaDestino: "",
     motivoMovimentacao: "",
-    senha: "", // ✅ campo adicionado
   })
 
   const [saldo, setSaldo] = useState<number | null>(null)
@@ -34,7 +34,9 @@ export function BankingTransactions() {
 
     setLoading(true)
     try {
-      const saldoAtual = await api.contas.consultarSaldo(transactionData.numeroConta)
+      const numeroLimpo = transactionData.numeroConta.replace(/\D/g, "")
+      const numeroFormatado = formatarNumeroConta(numeroLimpo)
+      const saldoAtual = await api.contas.consultarSaldo(numeroFormatado)
       setSaldo(saldoAtual)
     } catch (error: any) {
       alert(`Erro ao consultar saldo: ${error.message || "Erro desconhecido"}`)
@@ -52,7 +54,9 @@ export function BankingTransactions() {
 
     setLoading(true)
     try {
-      const conta = await api.contas.buscarPorNumeroConta(transactionData.numeroConta)
+      const numeroLimpo = transactionData.numeroConta.replace(/\D/g, "")
+      const numeroFormatado = formatarNumeroConta(numeroLimpo)
+      const conta = await api.contas.buscarPorNumeroConta(numeroFormatado)
       const extratoData = await api.transacoes.buscarExtrato(conta.id)
       setExtrato(extratoData)
       setShowExtrato(true)
@@ -82,7 +86,12 @@ export function BankingTransactions() {
       }
 
       const valor = Number.parseFloat(transactionData.valor)
-      const conta = await api.contas.buscarPorNumeroConta(transactionData.numeroConta)
+      const senha = transactionData.senha || "" 
+
+      const numeroLimpo = transactionData.numeroConta.replace(/\D/g, "")
+      const numeroFormatado = formatarNumeroConta(numeroLimpo)
+      const conta = await api.contas.buscarPorNumeroConta(numeroFormatado)
+
       let response
 
       switch (transactionData.tipoTransacao) {
@@ -91,7 +100,7 @@ export function BankingTransactions() {
             {
               contaId: conta.id,
               valor,
-              senha: transactionData.senha,
+              senha,
               motivoMovimentacao: transactionData.motivoMovimentacao,
             },
             Number.parseInt(gerenteId),
@@ -104,8 +113,8 @@ export function BankingTransactions() {
             {
               contaId: conta.id,
               valor,
+              senha,
               motivoMovimentacao: transactionData.motivoMovimentacao,
-              senha: transactionData.senha || "", // ✅ evita erro de tipo
             },
             Number.parseInt(gerenteId),
           )
@@ -117,13 +126,15 @@ export function BankingTransactions() {
             alert("Por favor, informe a conta de destino")
             return
           }
-          const contaDestino = await api.contas.buscarPorNumeroConta(transactionData.numeroContaDestino)
+          const numeroDestinoLimpo = transactionData.numeroContaDestino.replace(/\D/g, "")
+          const numeroDestinoFormatado = formatarNumeroConta(numeroDestinoLimpo)
+          const contaDestino = await api.contas.buscarPorNumeroConta(numeroDestinoFormatado)
           response = await api.transacoes.realizarTransferencia(
             {
               contaOrigemId: conta.id,
               contaDestinoId: contaDestino.id,
               valor,
-              senha: transactionData.senha,
+              senha,
               motivoMovimentacao: transactionData.motivoMovimentacao,
             },
             Number.parseInt(gerenteId),
@@ -137,9 +148,9 @@ export function BankingTransactions() {
         tipoTransacao: "",
         numeroConta: "",
         valor: "",
+        senha:"",
         numeroContaDestino: "",
         motivoMovimentacao: "",
-        senha: "",
       })
       setSaldo(null)
       setShowExtrato(false)
@@ -182,15 +193,17 @@ export function BankingTransactions() {
                   </SelectContent>
                 </Select>
               </div>
-
               <div>
                 <Label htmlFor="numeroConta">Número da Conta *</Label>
                 <div className="flex space-x-2">
                   <Input
                     id="numeroConta"
                     value={transactionData.numeroConta}
-                    onChange={(e) => setTransactionData({ ...transactionData, numeroConta: e.target.value })}
+                    onChange={(e) =>
+                      setTransactionData({ ...transactionData, numeroConta: formatarNumeroConta(e.target.value) })
+                    }
                     placeholder="000000-0"
+                    maxLength={8}
                     required
                   />
                   {isSaque && (
@@ -205,20 +218,24 @@ export function BankingTransactions() {
                   </p>
                 )}
               </div>
-
               {isTransfer && (
                 <div>
                   <Label htmlFor="numeroContaDestino">Número da Conta de Destino *</Label>
                   <Input
                     id="numeroContaDestino"
                     value={transactionData.numeroContaDestino}
-                    onChange={(e) => setTransactionData({ ...transactionData, numeroContaDestino: e.target.value })}
+                    onChange={(e) =>
+                      setTransactionData({
+                        ...transactionData,
+                        numeroContaDestino: formatarNumeroConta(e.target.value),
+                      })
+                    }
                     placeholder="000000-0"
+                    maxLength={8}
                     required
                   />
                 </div>
               )}
-
               <div>
                 <Label htmlFor="valor">Valor (R$) *</Label>
                 <Input
@@ -231,21 +248,6 @@ export function BankingTransactions() {
                   required
                 />
               </div>
-
-              {(isSaque || isTransfer) && (
-                <div>
-                  <Label htmlFor="senha">Senha *</Label>
-                  <Input
-                    id="senha"
-                    type="password"
-                    value={transactionData.senha}
-                    onChange={(e) => setTransactionData({ ...transactionData, senha: e.target.value })}
-                    placeholder="Digite a senha da conta"
-                    required
-                  />
-                </div>
-              )}
-
               <div className="md:col-span-2">
                 <Label htmlFor="motivoMovimentacao">Motivo da Movimentação</Label>
                 <Input
@@ -258,7 +260,7 @@ export function BankingTransactions() {
             </div>
           </div>
 
-          {/* Extrato */}
+          {/* Consulta de Extrato */}
           {transactionData.numeroConta && (
             <div className="form-section p-4 rounded-lg">
               <div className="flex justify-between items-center mb-4">
@@ -290,11 +292,7 @@ export function BankingTransactions() {
                             <p className="text-xs text-muted-foreground">NSU: {transacao.nsUnico}</p>
                           </div>
                           <p
-                            className={`font-bold ${
-                              transacao.tipo.includes("RECEBIDA") || transacao.tipo === "DEPOSITO"
-                                ? "text-green-600"
-                                : "text-red-600"
-                            }`}
+                            className={`font-bold ${transacao.tipo.includes("RECEBIDA") || transacao.tipo === "DEPOSITO" ? "text-green-600" : "text-red-600"}`}
                           >
                             {transacao.tipo.includes("RECEBIDA") || transacao.tipo === "DEPOSITO" ? "+" : "-"}R${" "}
                             {transacao.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
@@ -317,9 +315,9 @@ export function BankingTransactions() {
                   tipoTransacao: "",
                   numeroConta: "",
                   valor: "",
+                  senha:"",
                   numeroContaDestino: "",
                   motivoMovimentacao: "",
-                  senha: "",
                 })
                 setSaldo(null)
                 setShowExtrato(false)

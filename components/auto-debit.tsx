@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Repeat, Search, Trash2, List } from "lucide-react"
-import { api } from "@/lib/api"
+import { api, formatarNumeroConta } from "@/lib/api"
 import { TipoServico, FrequenciaDebito, type DebitoAutomaticoResponse } from "@/lib/types"
 
 export function AutoDebit() {
@@ -33,7 +33,9 @@ export function AutoDebit() {
 
     setLoading(true)
     try {
-      const conta = await api.contas.buscarPorNumeroConta(numeroConta)
+      const numeroLimpo = numeroConta.replace(/\D/g, "")
+      const numeroFormatado = formatarNumeroConta(numeroLimpo)
+      const conta = await api.contas.buscarPorNumeroConta(numeroFormatado)
       setAccountData(conta)
     } catch (error: any) {
       alert(`Erro ao buscar conta: ${error.message || "Conta não encontrada"}`)
@@ -71,7 +73,6 @@ export function AutoDebit() {
     try {
       await api.debitosAutomaticos.cancelar(debitoId)
       alert("Débito automático cancelado com sucesso!")
-      // Atualiza a lista
       await consultarDebitos()
     } catch (error: any) {
       alert(`Erro ao cancelar débito: ${error.message || "Erro desconhecido"}`)
@@ -107,7 +108,6 @@ export function AutoDebit() {
 
       alert("Débito automático cadastrado com sucesso!")
 
-      // Reset
       setNumeroConta("")
       setAccountData(null)
       setDebitData({
@@ -143,8 +143,9 @@ export function AutoDebit() {
               <Input
                 id="numeroConta"
                 value={numeroConta}
-                onChange={(e) => setNumeroConta(e.target.value)}
+                onChange={(e) => setNumeroConta(formatarNumeroConta(e.target.value))}
                 placeholder="000000-0"
+                maxLength={8}
               />
             </div>
             <div className="flex items-end">

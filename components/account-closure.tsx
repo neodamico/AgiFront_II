@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { UserX, Search, AlertTriangle } from "lucide-react"
-import { contaAPI } from "@/lib/api"
+import { contaAPI, formatarNumeroConta } from "@/lib/api"
 
 export function AccountClosure() {
   const [numeroConta, setNumeroConta] = useState("")
@@ -24,7 +24,9 @@ export function AccountClosure() {
 
     setLoading(true)
     try {
-      const conta = await contaAPI.buscarPorNumeroConta(numeroConta)
+      const numeroLimpo = numeroConta.replace(/\D/g, "")
+      const numeroFormatado = formatarNumeroConta(numeroLimpo)
+      const conta = await contaAPI.buscarPorNumeroConta(numeroFormatado)
       setAccountData(conta)
 
       const saldoZerado = (conta.saldo || conta.saldoDolar || 0) === 0
@@ -95,8 +97,9 @@ export function AccountClosure() {
               <Input
                 id="numeroConta"
                 value={numeroConta}
-                onChange={(e) => setNumeroConta(e.target.value)}
+                onChange={(e) => setNumeroConta(formatarNumeroConta(e.target.value))}
                 placeholder="000000-0"
+                maxLength={8}
               />
             </div>
             <div className="flex items-end">

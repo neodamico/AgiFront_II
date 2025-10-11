@@ -367,6 +367,15 @@ export function formatarCEP(cep: string): string {
   return cleanCEP.replace(/(\d{5})(\d{3})/, "$1-$2")
 }
 
+export function formatarNumeroConta(numeroConta: string): string {
+  const cleanNumero = numeroConta.replace(/\D/g, "")
+  if (cleanNumero.length <= 6) {
+    return cleanNumero
+  }
+  // Formato: 6 dígitos + hífen + 1 dígito verificador (ex: 123456-7)
+  return cleanNumero.replace(/(\d{6})(\d{1})/, "$1-$2")
+}
+
 export const api = {
   gerentes: gerenteAPI,
   clientes: clienteAPI,
