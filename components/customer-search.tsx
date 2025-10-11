@@ -34,6 +34,7 @@ export function CustomerSearch() {
     patrimonioEstimado: 0,
     possuiRestricoesBancarias: false,
     ePpe: false,
+    enderecos: [],
   })
 
   const handleSearch = async (e: React.FormEvent) => {
@@ -70,6 +71,7 @@ export function CustomerSearch() {
           patrimonioEstimado: clienteEncontrado.patrimonioEstimado,
           possuiRestricoesBancarias: clienteEncontrado.possuiRestricoesBancarias,
           ePpe: clienteEncontrado.ePpe,
+          enderecos: clienteEncontrado.enderecos || [],
         })
       } else {
         alert("Cliente não encontrado!")
@@ -90,7 +92,23 @@ export function CustomerSearch() {
 
     setLoading(true)
     try {
-      const clienteAtualizado = await clienteAPI.atualizar(cliente.id, editData)
+      const enderecosParaAtualizar = cliente.enderecos.map((endereco) => ({
+        idEndereco: endereco.idEndereco,
+        cep: endereco.cep,
+        logradouro: endereco.logradouro,
+        numero: endereco.numero,
+        complemento: endereco.complemento,
+        bairro: endereco.bairro,
+        cidade: endereco.cidade,
+        estado: endereco.estado,
+        tipoEndereco: endereco.tipoEndereco,
+        clienteId: cliente.id,
+      }))
+
+      const clienteAtualizado = await clienteAPI.atualizar(cliente.id, {
+        ...editData,
+        enderecos: enderecosParaAtualizar,
+      })
 
       setCliente(clienteAtualizado)
       setEditing(false)
@@ -123,6 +141,7 @@ export function CustomerSearch() {
         patrimonioEstimado: cliente.patrimonioEstimado,
         possuiRestricoesBancarias: cliente.possuiRestricoesBancarias,
         ePpe: cliente.ePpe,
+        enderecos: cliente.enderecos || [],
       })
     }
     setEditing(false)
@@ -548,6 +567,148 @@ export function CustomerSearch() {
                     </div>
                   </div>
                 </div>
+
+                {/* Endereços */}
+                {cliente.enderecos && cliente.enderecos.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3 text-primary">Endereços</h3>
+                    <div className="space-y-3">
+                      {cliente.enderecos.map((endereco) => (
+                        <div key={endereco.idEndereco} className="form-section p-4 rounded-lg">
+                          <div className="flex items-center justify-between mb-2">
+                            <Label className="text-sm font-semibold">{endereco.tipoEndereco}</Label>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <Label htmlFor={`editLogradouro-${endereco.idEndereco}`}>Logradouro *</Label>
+                              <Input
+                                id={`editLogradouro-${endereco.idEndereco}`}
+                                value={endereco.logradouro}
+                                onChange={(e) =>
+                                  setEditData({
+                                    ...editData,
+                                    enderecos: (editData.enderecos || []).map((ed) =>
+                                      ed.idEndereco === endereco.idEndereco
+                                        ? { ...ed, logradouro: e.target.value }
+                                        : ed,
+                                    ),
+                                  })
+                                }
+                                required
+                                disabled={loading}
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor={`editNumero-${endereco.idEndereco}`}>Número *</Label>
+                              <Input
+                                id={`editNumero-${endereco.idEndereco}`}
+                                value={endereco.numero}
+                                onChange={(e) =>
+                                  setEditData({
+                                    ...editData,
+                                    enderecos: (editData.enderecos || []).map((ed) =>
+                                      ed.idEndereco === endereco.idEndereco
+                                        ? { ...ed, numero:e.target.value }
+                                        : ed,
+                                    ),
+                                  })
+                                }
+                                required
+                                disabled={loading}
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor={`editComplemento-${endereco.idEndereco}`}>Complemento</Label>
+                              <Input
+                                id={`editComplemento-${endereco.idEndereco}`}
+                                value={endereco.complemento || ""}
+                                onChange={(e) =>
+                                  setEditData({
+                                    ...editData,
+                                    enderecos: (editData.enderecos || []).map((ed) =>
+                                      ed.idEndereco === endereco.idEndereco
+                                        ? { ...ed, complemento: e.target.value }
+                                        : ed,
+                                    ),
+                                  })
+                                }
+                                disabled={loading}
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor={`editBairro-${endereco.idEndereco}`}>Bairro *</Label>
+                              <Input
+                                id={`editBairro-${endereco.idEndereco}`}
+                                value={endereco.bairro}
+                                onChange={(e) =>
+                                  setEditData({
+                                    ...editData,
+                                    enderecos: (editData.enderecos || []).map((ed) =>
+                                      ed.idEndereco === endereco.idEndereco ? { ...ed, bairro: e.target.value } : ed,
+                                    ),
+                                  })
+                                }
+                                required
+                                disabled={loading}
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor={`editCidade-${endereco.idEndereco}`}>Cidade *</Label>
+                              <Input
+                                id={`editCidade-${endereco.idEndereco}`}
+                                value={endereco.cidade}
+                                onChange={(e) =>
+                                  setEditData({
+                                    ...editData,
+                                    enderecos: (editData.enderecos || []).map((ed) =>
+                                      ed.idEndereco === endereco.idEndereco ? { ...ed, cidade: e.target.value } : ed,
+                                    ),
+                                  })
+                                }
+                                required
+                                disabled={loading}
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor={`editEstado-${endereco.idEndereco}`}>Estado *</Label>
+                              <Input
+                                id={`editEstado-${endereco.idEndereco}`}
+                                value={endereco.estado}
+                                onChange={(e) =>
+                                  setEditData({
+                                    ...editData,
+                                    enderecos: (editData.enderecos || []).map((ed) =>
+                                      ed.idEndereco === endereco.idEndereco ? { ...ed, estado: e.target.value } : ed,
+                                    ),
+                                  })
+                                }
+                                required
+                                disabled={loading}
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor={`editCep-${endereco.idEndereco}`}>CEP *</Label>
+                              <Input
+                                id={`editCep-${endereco.idEndereco}`}
+                                value={endereco.cep}
+                                onChange={(e) =>
+                                  setEditData({
+                                    ...editData,
+                                    enderecos: (editData.enderecos || []).map((ed) =>
+                                      ed.idEndereco === endereco.idEndereco ? { ...ed, cep: e.target.value } : ed,
+                                    ),
+                                  })
+                                }
+                                required
+                                disabled={loading}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex justify-end space-x-4">
                   <Button type="button" variant="outline" onClick={handleCancelEdit} disabled={loading}>

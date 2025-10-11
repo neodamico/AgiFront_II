@@ -7,26 +7,67 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { DollarSign } from "lucide-react"
+import { DollarSign, FileText } from "lucide-react"
 import { api } from "@/lib/api"
+import type { TransacaoResponse } from "@/lib/types"
 
 export function BankingTransactions() {
   const [transactionData, setTransactionData] = useState({
     tipoTransacao: "",
-    contaId: "",
+    numeroConta: "",
     valor: "",
-    contaDestinoId: "", // Para transferências
+    numeroContaDestino: "",
     motivoMovimentacao: "",
+    senha: "", // ✅ campo adicionado
   })
 
-  const [senha, setSenha] = useState("")
-
+  const [saldo, setSaldo] = useState<number | null>(null)
+  const [extrato, setExtrato] = useState<TransacaoResponse[]>([])
+  const [showExtrato, setShowExtrato] = useState(false)
   const [loading, setLoading] = useState(false)
+
+  const consultarSaldo = async () => {
+    if (!transactionData.numeroConta) {
+      alert("Por favor, informe o número da conta")
+      return
+    }
+
+    setLoading(true)
+    try {
+      const saldoAtual = await api.contas.consultarSaldo(transactionData.numeroConta)
+      setSaldo(saldoAtual)
+    } catch (error: any) {
+      alert(`Erro ao consultar saldo: ${error.message || "Erro desconhecido"}`)
+      setSaldo(null)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const consultarExtrato = async () => {
+    if (!transactionData.numeroConta) {
+      alert("Por favor, informe o número da conta")
+      return
+    }
+
+    setLoading(true)
+    try {
+      const conta = await api.contas.buscarPorNumeroConta(transactionData.numeroConta)
+      const extratoData = await api.transacoes.buscarExtrato(conta.id)
+      setExtrato(extratoData)
+      setShowExtrato(true)
+    } catch (error: any) {
+      alert(`Erro ao consultar extrato: ${error.message || "Erro desconhecido"}`)
+      setExtrato([])
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!transactionData.tipoTransacao || !transactionData.contaId || !transactionData.valor) {
+    if (!transactionData.tipoTransacao || !transactionData.numeroConta || !transactionData.valor) {
       alert("Por favor, preencha todos os campos obrigatórios")
       return
     }
@@ -41,17 +82,16 @@ export function BankingTransactions() {
       }
 
       const valor = Number.parseFloat(transactionData.valor)
-      const contaId = Number.parseInt(transactionData.contaId)
-
+      const conta = await api.contas.buscarPorNumeroConta(transactionData.numeroConta)
       let response
 
       switch (transactionData.tipoTransacao) {
         case "saque":
           response = await api.transacoes.realizarSaque(
             {
-              contaId,
+              contaId: conta.id,
               valor,
-              senha,
+              senha: transactionData.senha,
               motivoMovimentacao: transactionData.motivoMovimentacao,
             },
             Number.parseInt(gerenteId),
@@ -62,10 +102,10 @@ export function BankingTransactions() {
         case "deposito":
           response = await api.transacoes.realizarDeposito(
             {
-              contaId,
+              contaId: conta.id,
               valor,
-              senha,
               motivoMovimentacao: transactionData.motivoMovimentacao,
+              senha: transactionData.senha || "", // ✅ evita erro de tipo
             },
             Number.parseInt(gerenteId),
           )
@@ -73,16 +113,17 @@ export function BankingTransactions() {
           break
 
         case "transferencia":
-          if (!transactionData.contaDestinoId) {
+          if (!transactionData.numeroContaDestino) {
             alert("Por favor, informe a conta de destino")
             return
           }
+          const contaDestino = await api.contas.buscarPorNumeroConta(transactionData.numeroContaDestino)
           response = await api.transacoes.realizarTransferencia(
             {
-              contaOrigemId: contaId,
-              contaDestinoId: Number.parseInt(transactionData.contaDestinoId),
+              contaOrigemId: conta.id,
+              contaDestinoId: contaDestino.id,
               valor,
-              senha,
+              senha: transactionData.senha,
               motivoMovimentacao: transactionData.motivoMovimentacao,
             },
             Number.parseInt(gerenteId),
@@ -94,11 +135,14 @@ export function BankingTransactions() {
       // Reset
       setTransactionData({
         tipoTransacao: "",
-        contaId: "",
+        numeroConta: "",
         valor: "",
-        contaDestinoId: "",
+        numeroContaDestino: "",
         motivoMovimentacao: "",
+        senha: "",
       })
+      setSaldo(null)
+      setShowExtrato(false)
     } catch (error: any) {
       alert(`Erro ao processar transação: ${error.message || "Erro desconhecido"}`)
     } finally {
@@ -107,6 +151,7 @@ export function BankingTransactions() {
   }
 
   const isTransfer = transactionData.tipoTransacao === "transferencia"
+  const isSaque = transactionData.tipoTransacao === "saque"
 
   return (
     <Card className="banking-terminal">
@@ -137,30 +182,43 @@ export function BankingTransactions() {
                   </SelectContent>
                 </Select>
               </div>
+
               <div>
-                <Label htmlFor="contaId">ID da Conta *</Label>
-                <Input
-                  id="contaId"
-                  type="number"
-                  value={transactionData.contaId}
-                  onChange={(e) => setTransactionData({ ...transactionData, contaId: e.target.value })}
-                  placeholder="ID da conta"
-                  required
-                />
+                <Label htmlFor="numeroConta">Número da Conta *</Label>
+                <div className="flex space-x-2">
+                  <Input
+                    id="numeroConta"
+                    value={transactionData.numeroConta}
+                    onChange={(e) => setTransactionData({ ...transactionData, numeroConta: e.target.value })}
+                    placeholder="000000-0"
+                    required
+                  />
+                  {isSaque && (
+                    <Button type="button" onClick={consultarSaldo} disabled={loading} size="sm">
+                      Ver Saldo
+                    </Button>
+                  )}
+                </div>
+                {saldo !== null && isSaque && (
+                  <p className="text-sm mt-1 text-green-600">
+                    Saldo disponível: R$ {saldo.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                  </p>
+                )}
               </div>
+
               {isTransfer && (
                 <div>
-                  <Label htmlFor="contaDestinoId">ID da Conta de Destino *</Label>
+                  <Label htmlFor="numeroContaDestino">Número da Conta de Destino *</Label>
                   <Input
-                    id="contaDestinoId"
-                    type="number"
-                    value={transactionData.contaDestinoId}
-                    onChange={(e) => setTransactionData({ ...transactionData, contaDestinoId: e.target.value })}
-                    placeholder="ID da conta destino"
+                    id="numeroContaDestino"
+                    value={transactionData.numeroContaDestino}
+                    onChange={(e) => setTransactionData({ ...transactionData, numeroContaDestino: e.target.value })}
+                    placeholder="000000-0"
                     required
                   />
                 </div>
               )}
+
               <div>
                 <Label htmlFor="valor">Valor (R$) *</Label>
                 <Input
@@ -173,31 +231,99 @@ export function BankingTransactions() {
                   required
                 />
               </div>
+
+              {(isSaque || isTransfer) && (
+                <div>
+                  <Label htmlFor="senha">Senha *</Label>
+                  <Input
+                    id="senha"
+                    type="password"
+                    value={transactionData.senha}
+                    onChange={(e) => setTransactionData({ ...transactionData, senha: e.target.value })}
+                    placeholder="Digite a senha da conta"
+                    required
+                  />
+                </div>
+              )}
+
               <div className="md:col-span-2">
                 <Label htmlFor="motivoMovimentacao">Motivo da Movimentação</Label>
                 <Input
                   id="motivoMovimentacao"
                   value={transactionData.motivoMovimentacao}
                   onChange={(e) => setTransactionData({ ...transactionData, motivoMovimentacao: e.target.value })}
-                  placeholder="Opcional"
+                  placeholder="Opcional (obrigatório para valores acima de R$ 10.000)"
                 />
               </div>
             </div>
           </div>
 
+          {/* Extrato */}
+          {transactionData.numeroConta && (
+            <div className="form-section p-4 rounded-lg">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-primary">Extrato Bancário</h3>
+                <Button
+                  type="button"
+                  onClick={consultarExtrato}
+                  disabled={loading}
+                  className="flex items-center space-x-2"
+                >
+                  <FileText className="w-4 h-4" />
+                  <span>Consultar Extrato</span>
+                </Button>
+              </div>
+              {showExtrato && (
+                <div className="space-y-2 max-h-96 overflow-y-auto">
+                  {extrato.length === 0 ? (
+                    <p className="text-muted-foreground">Nenhuma transação encontrada.</p>
+                  ) : (
+                    extrato.map((transacao) => (
+                      <div key={transacao.id} className="border rounded-lg p-3">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="font-semibold">{transacao.tipo}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {new Date(transacao.dataHora).toLocaleString("pt-BR")}
+                            </p>
+                            {transacao.motivoMovimentacao && <p className="text-sm">{transacao.motivoMovimentacao}</p>}
+                            <p className="text-xs text-muted-foreground">NSU: {transacao.nsUnico}</p>
+                          </div>
+                          <p
+                            className={`font-bold ${
+                              transacao.tipo.includes("RECEBIDA") || transacao.tipo === "DEPOSITO"
+                                ? "text-green-600"
+                                : "text-red-600"
+                            }`}
+                          >
+                            {transacao.tipo.includes("RECEBIDA") || transacao.tipo === "DEPOSITO" ? "+" : "-"}R${" "}
+                            {transacao.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="flex justify-end space-x-4">
             <Button
               type="button"
               variant="outline"
-              onClick={() =>
+              onClick={() => {
                 setTransactionData({
                   tipoTransacao: "",
-                  contaId: "",
+                  numeroConta: "",
                   valor: "",
-                  contaDestinoId: "",
+                  numeroContaDestino: "",
                   motivoMovimentacao: "",
+                  senha: "",
                 })
-              }
+                setSaldo(null)
+                setShowExtrato(false)
+              }}
               disabled={loading}
             >
               Cancelar

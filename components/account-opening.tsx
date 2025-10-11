@@ -22,7 +22,7 @@ export function AccountOpening() {
     agencia: "0001",
     senha: "",
     limiteChequeEspecial: "",
-    responsavelId: "",
+    responsavelContaId: "", // Mudado de responsavelId para responsavelContaId
   })
 
   const buscarCliente = async () => {
@@ -139,7 +139,7 @@ export function AccountOpening() {
           break
 
         case "jovem":
-          if (!contaData.responsavelId) {
+          if (!contaData.responsavelContaId) {
             alert("Informe o ID da conta do responsável")
             return
           }
@@ -147,7 +147,7 @@ export function AccountOpening() {
             agencia: contaData.agencia,
             titularCpfs,
             senha: contaData.senha,
-            responsavelId: Number.parseInt(contaData.responsavelId),
+            responsavelContaId: Number.parseInt(contaData.responsavelContaId),
           })
           alert(`Conta Jovem ${contaJovem.numeroConta} criada com sucesso!`)
           break
@@ -171,7 +171,7 @@ export function AccountOpening() {
         agencia: "0001",
         senha: "",
         limiteChequeEspecial: "",
-        responsavelId: "",
+        responsavelContaId: "", // Mudado de responsavelId para responsavelContaId
       })
     } catch (error: any) {
       console.error("Erro ao criar conta:", error)
@@ -315,13 +315,13 @@ export function AccountOpening() {
 
               {tipoConta === "jovem" && (
                 <div>
-                  <Label htmlFor="responsavelId">ID da Conta do Responsável *</Label>
+                  <Label htmlFor="responsavelContaId">ID da Conta do Responsável *</Label>
                   <Input
-                    id="responsavelId"
+                    id="responsavelContaId"
                     type="number"
-                    value={contaData.responsavelId}
-                    onChange={(e) => setContaData({ ...contaData, responsavelId: e.target.value })}
-                    placeholder="ID da conta do responsável"
+                    value={contaData.responsavelContaId}
+                    onChange={(e) => setContaData({ ...contaData, responsavelContaId: e.target.value })}
+                    placeholder="ID da conta (não do cliente)"
                     required
                   />
                 </div>
@@ -341,7 +341,7 @@ export function AccountOpening() {
                     agencia: "0001",
                     senha: "",
                     limiteChequeEspecial: "",
-                    responsavelId: "",
+                    responsavelContaId: "", // Mudado de responsavelId para responsavelContaId
                   })
                 }}
               >

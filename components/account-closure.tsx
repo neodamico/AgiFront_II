@@ -10,24 +10,24 @@ import { UserX, Search, AlertTriangle } from "lucide-react"
 import { contaAPI } from "@/lib/api"
 
 export function AccountClosure() {
-  const [contaId, setContaId] = useState("")
+  const [numeroConta, setNumeroConta] = useState("")
   const [accountData, setAccountData] = useState<any>(null)
   const [senha, setSenha] = useState("")
   const [canClose, setCanClose] = useState(false)
   const [loading, setLoading] = useState(false)
 
   const searchAccount = async () => {
-    if (!contaId) {
-      alert("Por favor, informe o ID da conta")
+    if (!numeroConta) {
+      alert("Por favor, informe o número da conta")
       return
     }
 
     setLoading(true)
     try {
-      const conta = await contaAPI.buscarPorId(Number.parseInt(contaId))
+      const conta = await contaAPI.buscarPorNumeroConta(numeroConta)
       setAccountData(conta)
 
-      const saldoZerado = (conta.saldo || conta.saldoDolares || 0) === 0
+      const saldoZerado = (conta.saldo || conta.saldoDolar || 0) === 0
       const contaAtiva = conta.statusConta === "ATIVA"
       setCanClose(saldoZerado && contaAtiva)
     } catch (error: any) {
@@ -54,11 +54,11 @@ export function AccountClosure() {
 
     setLoading(true)
     try {
-      await contaAPI.desativar(accountData.id)
+      await contaAPI.desativar(accountData.numeroConta)
       alert(`Conta ${accountData.numeroConta} encerrada com sucesso! Status alterado para EXCLUIDA.`)
 
       // Reset
-      setContaId("")
+      setNumeroConta("")
       setAccountData(null)
       setSenha("")
       setCanClose(false)
@@ -91,13 +91,12 @@ export function AccountClosure() {
           <h3 className="text-lg font-semibold mb-4 text-primary">Buscar Conta</h3>
           <div className="flex space-x-4">
             <div className="flex-1">
-              <Label htmlFor="contaId">ID da Conta</Label>
+              <Label htmlFor="numeroConta">Número da Conta</Label>
               <Input
-                id="contaId"
-                type="number"
-                value={contaId}
-                onChange={(e) => setContaId(e.target.value)}
-                placeholder="123"
+                id="numeroConta"
+                value={numeroConta}
+                onChange={(e) => setNumeroConta(e.target.value)}
+                placeholder="000000-0"
               />
             </div>
             <div className="flex items-end">
@@ -129,10 +128,10 @@ export function AccountClosure() {
               <div>
                 <Label>Saldo Atual</Label>
                 <Input
-                  value={formatarSaldo(accountData.saldo || accountData.saldoDolares || 0)}
+                  value={formatarSaldo(accountData.saldo || accountData.saldoDolar || 0)}
                   disabled
                   className={
-                    (accountData.saldo || accountData.saldoDolares || 0) === 0 ? "text-green-600" : "text-red-600"
+                    (accountData.saldo || accountData.saldoDolar || 0) === 0 ? "text-green-600" : "text-red-600"
                   }
                 />
               </div>
@@ -146,7 +145,7 @@ export function AccountClosure() {
               </div>
               <div>
                 <Label>Titulares</Label>
-                <Input value={accountData.titularIds?.length || 0} disabled />
+                <Input value={accountData.titularCpfs?.size || 0} disabled />
               </div>
             </div>
           </div>
@@ -165,12 +164,10 @@ export function AccountClosure() {
             </div>
             <div className="text-sm space-y-1">
               <p
-                className={
-                  (accountData.saldo || accountData.saldoDolares || 0) === 0 ? "text-green-600" : "text-red-600"
-                }
+                className={(accountData.saldo || accountData.saldoDolar || 0) === 0 ? "text-green-600" : "text-red-600"}
               >
-                {(accountData.saldo || accountData.saldoDolares || 0) === 0 ? "✓" : "✗"} Saldo zerado:{" "}
-                {(accountData.saldo || accountData.saldoDolares || 0) === 0 ? "Sim" : "Não"}
+                {(accountData.saldo || accountData.saldoDolar || 0) === 0 ? "✓" : "✗"} Saldo zerado:{" "}
+                {(accountData.saldo || accountData.saldoDolar || 0) === 0 ? "Sim" : "Não"}
               </p>
               <p className={accountData.statusConta === "ATIVA" ? "text-green-600" : "text-red-600"}>
                 {accountData.statusConta === "ATIVA" ? "✓" : "✗"} Conta ativa:{" "}
@@ -211,7 +208,7 @@ export function AccountClosure() {
                 type="button"
                 variant="outline"
                 onClick={() => {
-                  setContaId("")
+                  setNumeroConta("")
                   setAccountData(null)
                   setSenha("")
                   setCanClose(false)

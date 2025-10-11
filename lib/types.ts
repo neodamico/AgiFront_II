@@ -50,6 +50,12 @@ export enum TipoServico {
   OUTROS = "OUTROS",
 }
 
+export enum FrequenciaDebito {
+  SEMANAL = "SEMANAL",
+  MENSAL = "MENSAL",
+  ANUAL = "ANUAL",
+}
+
 // ============= DTOs DE REQUEST =============
 
 export interface LoginRequest {
@@ -126,6 +132,7 @@ export interface ClienteUpdateRequest {
 }
 
 export interface EnderecoRequest {
+  idEndereco?: number // Adicionado para atualização de endereços existentes
   cep: string
   logradouro: string
   numero: string
@@ -165,7 +172,7 @@ export interface ContaJovemRequest {
   agencia: string
   titularCpfs: string[]
   senha: string
-  responsavelId: number
+  responsavelContaId: number // Mudado de responsavelId para responsavelContaId (ID da conta do responsável)
 }
 
 export interface ContaGlobalRequest {
@@ -206,7 +213,7 @@ export interface DebitoAutomaticoRequest {
   contaId: number
   diaAgendado: number // 1-28
   tipoServico: TipoServico
-  frequencia: "SEMANAL" | "MENSAL" | "ANUAL"
+  frequencia: FrequenciaDebito // Mudado de string para enum FrequenciaDebito
   identificadorConvenio: string
   descricao?: string
 }
@@ -287,7 +294,7 @@ export interface ContaJovemResponse {
   numeroConta: string
   agencia: string
   saldo: number
-  responsavelId: number
+  responsavelContaId: number // Mudado de responsavelId para responsavelContaId
   titularCpfs: string[]
   statusConta: StatusConta
   tipoConta: string
@@ -328,7 +335,7 @@ export interface DebitoAutomaticoResponse {
   id: number
   contaId: number
   diaAgendado: number
-  frequencia: string
+  frequencia: FrequenciaDebito // Mudado de string para enum FrequenciaDebito
   tipoServico: string
   status: string
   identificadorConvenio: string

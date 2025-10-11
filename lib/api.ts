@@ -240,6 +240,11 @@ export const contaAPI = {
     })
   },
 
+  consultarSaldo: async (numeroConta: string): Promise<number> => {
+    const conta = await contaAPI.buscarPorNumeroConta(numeroConta)
+    return conta.saldo || 0
+  },
+
   // Atualizar conta
   atualizar: async (id: number, data: ContaUpdateRequest): Promise<ContaUpdateResponse> => {
     return fetchAPI<ContaUpdateResponse>(`/contas/${id}`, {
