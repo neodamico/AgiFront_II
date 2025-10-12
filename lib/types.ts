@@ -172,7 +172,7 @@ export interface ContaJovemRequest {
   agencia: string
   titularCpfs: string[]
   senha: string
-  responsavelContaId: number // Mudado de responsavelId para responsavelContaId (ID da conta do responsável)
+  responsavelId: number // Mudado de responsavelId para responsavelContaId (ID da conta do responsável)
 }
 
 export interface ContaGlobalRequest {
@@ -294,7 +294,7 @@ export interface ContaJovemResponse {
   numeroConta: string
   agencia: string
   saldo: number
-  responsavelContaId: number // Mudado de responsavelId para responsavelContaId
+  responsavelId: number 
   titularCpfs: string[]
   statusConta: StatusConta
   tipoConta: string
@@ -336,8 +336,8 @@ export interface DebitoAutomaticoResponse {
   contaId: number
   diaAgendado: number
   frequencia: FrequenciaDebito // Mudado de string para enum FrequenciaDebito
-  tipoServico: string
-  status: string
+  tipoServico: TipoServico
+  status: StatusDebito
   identificadorConvenio: string
   descricao: string
 }

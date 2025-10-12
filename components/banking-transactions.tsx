@@ -1,98 +1,98 @@
-"use client"
+"use client";
 
-import type React from "react"
-import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { DollarSign, FileText } from "lucide-react"
-import { api, formatarNumeroConta } from "@/lib/api"
-import type { TransacaoResponse } from "@/lib/types"
+import type React from "react";
+import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DollarSign, FileText } from "lucide-react";
+import { api, formatarNumeroConta } from "@/lib/api";
+import type { TransacaoResponse } from "@/lib/types";
 
 export function BankingTransactions() {
   const [transactionData, setTransactionData] = useState({
     tipoTransacao: "",
     numeroConta: "",
     valor: "",
-    senha:"",
+    senha: "",
     numeroContaDestino: "",
     motivoMovimentacao: "",
-  })
+  });
 
-  const [saldo, setSaldo] = useState<number | null>(null)
-  const [extrato, setExtrato] = useState<TransacaoResponse[]>([])
-  const [showExtrato, setShowExtrato] = useState(false)
-  const [loading, setLoading] = useState(false)
+  const [saldo, setSaldo] = useState<number | null>(null);
+  const [extrato, setExtrato] = useState<TransacaoResponse[]>([]);
+  const [showExtrato, setShowExtrato] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const consultarSaldo = async () => {
     if (!transactionData.numeroConta) {
-      alert("Por favor, informe o número da conta")
-      return
+      alert("Por favor, informe o número da conta");
+      return;
     }
 
-    setLoading(true)
+    setLoading(true);
     try {
-      const numeroLimpo = transactionData.numeroConta.replace(/\D/g, "")
-      const numeroFormatado = formatarNumeroConta(numeroLimpo)
-      const saldoAtual = await api.contas.consultarSaldo(numeroFormatado)
-      setSaldo(saldoAtual)
+      const numeroLimpo = transactionData.numeroConta.replace(/\D/g, "");
+      const numeroFormatado = formatarNumeroConta(numeroLimpo);
+      const saldoAtual = await api.contas.consultarSaldo(numeroFormatado);
+      setSaldo(saldoAtual);
     } catch (error: any) {
-      alert(`Erro ao consultar saldo: ${error.message || "Erro desconhecido"}`)
-      setSaldo(null)
+      alert(`Erro ao consultar saldo: ${error.message || "Erro desconhecido"}`);
+      setSaldo(null);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const consultarExtrato = async () => {
     if (!transactionData.numeroConta) {
-      alert("Por favor, informe o número da conta")
-      return
+      alert("Por favor, informe o número da conta");
+      return;
     }
 
-    setLoading(true)
+    setLoading(true);
     try {
-      const numeroLimpo = transactionData.numeroConta.replace(/\D/g, "")
-      const numeroFormatado = formatarNumeroConta(numeroLimpo)
-      const conta = await api.contas.buscarPorNumeroConta(numeroFormatado)
-      const extratoData = await api.transacoes.buscarExtrato(conta.id)
-      setExtrato(extratoData)
-      setShowExtrato(true)
+      const numeroLimpo = transactionData.numeroConta.replace(/\D/g, "");
+      const numeroFormatado = formatarNumeroConta(numeroLimpo);
+      const conta = await api.contas.buscarPorNumeroConta(numeroFormatado);
+      const extratoData = await api.transacoes.buscarExtrato(conta.id);
+      setExtrato(extratoData);
+      setShowExtrato(true);
     } catch (error: any) {
-      alert(`Erro ao consultar extrato: ${error.message || "Erro desconhecido"}`)
-      setExtrato([])
+      alert(`Erro ao consultar extrato: ${error.message || "Erro desconhecido"}`);
+      setExtrato([]);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
     if (!transactionData.tipoTransacao || !transactionData.numeroConta || !transactionData.valor) {
-      alert("Por favor, preencha todos os campos obrigatórios")
-      return
+      alert("Por favor, preencha todos os campos obrigatórios");
+      return;
     }
 
-    setLoading(true)
+    setLoading(true);
 
     try {
-      const gerenteId = localStorage.getItem("gerenteId")
+      const gerenteId = localStorage.getItem("gerenteId");
       if (!gerenteId) {
-        alert("Erro: Gerente não identificado. Faça login novamente.")
-        return
+        alert("Erro: Gerente não identificado. Faça login novamente.");
+        return;
       }
 
-      const valor = Number.parseFloat(transactionData.valor)
-      const senha = transactionData.senha || "" 
+      const valor = Number.parseFloat(transactionData.valor);
+      const senha = transactionData.senha || "";
 
-      const numeroLimpo = transactionData.numeroConta.replace(/\D/g, "")
-      const numeroFormatado = formatarNumeroConta(numeroLimpo)
-      const conta = await api.contas.buscarPorNumeroConta(numeroFormatado)
+      const numeroLimpo = transactionData.numeroConta.replace(/\D/g, "");
+      const numeroFormatado = formatarNumeroConta(numeroLimpo);
+      const conta = await api.contas.buscarPorNumeroConta(numeroFormatado);
 
-      let response
+      let response;
 
       switch (transactionData.tipoTransacao) {
         case "saque":
@@ -103,10 +103,10 @@ export function BankingTransactions() {
               senha,
               motivoMovimentacao: transactionData.motivoMovimentacao,
             },
-            Number.parseInt(gerenteId),
-          )
-          alert(`Saque de R$ ${valor.toFixed(2)} realizado com sucesso!\nNSU: ${response.nsUnico}`)
-          break
+            Number.parseInt(gerenteId)
+          );
+          alert(`Saque de R$ ${valor.toFixed(2)} realizado com sucesso!\nNSU: ${response.nsUnico}`);
+          break;
 
         case "deposito":
           response = await api.transacoes.realizarDeposito(
@@ -116,19 +116,19 @@ export function BankingTransactions() {
               senha,
               motivoMovimentacao: transactionData.motivoMovimentacao,
             },
-            Number.parseInt(gerenteId),
-          )
-          alert(`Depósito de R$ ${valor.toFixed(2)} realizado com sucesso!\nNSU: ${response.nsUnico}`)
-          break
+            Number.parseInt(gerenteId)
+          );
+          alert(`Depósito de R$ ${valor.toFixed(2)} realizado com sucesso!\nNSU: ${response.nsUnico}`);
+          break;
 
         case "transferencia":
           if (!transactionData.numeroContaDestino) {
-            alert("Por favor, informe a conta de destino")
-            return
+            alert("Por favor, informe a conta de destino");
+            return;
           }
-          const numeroDestinoLimpo = transactionData.numeroContaDestino.replace(/\D/g, "")
-          const numeroDestinoFormatado = formatarNumeroConta(numeroDestinoLimpo)
-          const contaDestino = await api.contas.buscarPorNumeroConta(numeroDestinoFormatado)
+          const numeroDestinoLimpo = transactionData.numeroContaDestino.replace(/\D/g, "");
+          const numeroDestinoFormatado = formatarNumeroConta(numeroDestinoLimpo);
+          const contaDestino = await api.contas.buscarPorNumeroConta(numeroDestinoFormatado);
           response = await api.transacoes.realizarTransferencia(
             {
               contaOrigemId: conta.id,
@@ -137,10 +137,10 @@ export function BankingTransactions() {
               senha,
               motivoMovimentacao: transactionData.motivoMovimentacao,
             },
-            Number.parseInt(gerenteId),
-          )
-          alert(`Transferência de R$ ${valor.toFixed(2)} realizada com sucesso!\nNSU: ${response.nsUnico}`)
-          break
+            Number.parseInt(gerenteId)
+          );
+          alert(`Transferência de R$ ${valor.toFixed(2)} realizada com sucesso!\nNSU: ${response.nsUnico}`);
+          break;
       }
 
       // Reset
@@ -148,21 +148,21 @@ export function BankingTransactions() {
         tipoTransacao: "",
         numeroConta: "",
         valor: "",
-        senha:"",
+        senha: "",
         numeroContaDestino: "",
         motivoMovimentacao: "",
-      })
-      setSaldo(null)
-      setShowExtrato(false)
+      });
+      setSaldo(null);
+      setShowExtrato(false);
     } catch (error: any) {
-      alert(`Erro ao processar transação: ${error.message || "Erro desconhecido"}`)
+      alert(`Erro ao processar transação: ${error.message || "Erro desconhecido"}`);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
-  const isTransfer = transactionData.tipoTransacao === "transferencia"
-  const isSaque = transactionData.tipoTransacao === "saque"
+  const isTransfer = transactionData.tipoTransacao === "transferencia";
+  const isSaque = transactionData.tipoTransacao === "saque";
 
   return (
     <Card className="banking-terminal">
@@ -278,28 +278,46 @@ export function BankingTransactions() {
               {showExtrato && (
                 <div className="space-y-2 max-h-96 overflow-y-auto">
                   {extrato.length === 0 ? (
-                    <p className="text-muted-foreground">Nenhuma transação encontrada.</p>
+                    <p className="text-muted-foreground">
+                      Nenhuma transação encontrada.
+                    </p>
                   ) : (
-                    extrato.map((transacao) => (
-                      <div key={transacao.id} className="border rounded-lg p-3">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <p className="font-semibold">{transacao.tipo}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {new Date(transacao.dataHora).toLocaleString("pt-BR")}
+                    extrato.map((transacao) => {
+                      // Obtém o número da conta consultada
+                      const numeroContaLimpo = transactionData.numeroConta.replace(/\D/g, "");
+                      const numeroContaFormatado = formatarNumeroConta(numeroContaLimpo);
+                      // Determina se a transação é uma entrada
+                      const isEntrada =
+                        transacao.tipo === "DEPOSITO" ||
+                        (transacao.tipo === "TRANSFERENCIA" && transacao.numeroContaDestino === numeroContaFormatado);
+
+                      return (
+                        <div key={transacao.id} className="border rounded-lg p-3">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="font-semibold">{transacao.tipo}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {new Date(transacao.dataHora).toLocaleString("pt-BR")}
+                              </p>
+                              {transacao.motivoMovimentacao && (
+                                <p className="text-sm">{transacao.motivoMovimentacao}</p>
+                              )}
+                              <p className="text-xs text-muted-foreground">
+                                NSU: {transacao.nsUnico}
+                              </p>
+                            </div>
+                            <p
+                              className={`font-bold ${isEntrada ? "text-green-600" : "text-red-600"}`}
+                            >
+                              {isEntrada ? "+" : "-"}R${" "}
+                              {transacao.valor.toLocaleString("pt-BR", {
+                                minimumFractionDigits: 2,
+                              })}
                             </p>
-                            {transacao.motivoMovimentacao && <p className="text-sm">{transacao.motivoMovimentacao}</p>}
-                            <p className="text-xs text-muted-foreground">NSU: {transacao.nsUnico}</p>
                           </div>
-                          <p
-                            className={`font-bold ${transacao.tipo.includes("RECEBIDA") || transacao.tipo === "DEPOSITO" ? "text-green-600" : "text-red-600"}`}
-                          >
-                            {transacao.tipo.includes("RECEBIDA") || transacao.tipo === "DEPOSITO" ? "+" : "-"}R${" "}
-                            {transacao.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                          </p>
                         </div>
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
               )}
@@ -315,12 +333,12 @@ export function BankingTransactions() {
                   tipoTransacao: "",
                   numeroConta: "",
                   valor: "",
-                  senha:"",
+                  senha: "",
                   numeroContaDestino: "",
                   motivoMovimentacao: "",
-                })
-                setSaldo(null)
-                setShowExtrato(false)
+                });
+                setSaldo(null);
+                setShowExtrato(false);
               }}
               disabled={loading}
             >
@@ -333,5 +351,5 @@ export function BankingTransactions() {
         </form>
       </CardContent>
     </Card>
-  )
+  );
 }
