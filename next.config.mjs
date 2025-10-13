@@ -1,5 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'export',
+  basePath: '/AgiFront_II',
   eslint: {
     ignoreDuringBuilds: true,
   },
