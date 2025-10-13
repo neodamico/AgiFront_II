@@ -28,7 +28,7 @@ export function AccountOpening() {
     agencia: "0001",
     senha: "",
     limiteChequeEspecial: "",
-    responsavelId: "", // Mudado de responsavelId para responsavelContaId
+    numeroContaResponsavel: "",
   });
 
   const buscarCliente = async () => {
@@ -151,17 +151,17 @@ export function AccountOpening() {
             `Conta Poupança ${contaPoupanca.numeroConta} criada com sucesso!`
           );
           break;
-          
+
         case "jovem":
-          if (!contaData.responsavelId) {
-            alert("Informe o ID do responsável");
+          if (!contaData.numeroContaResponsavel) {
+            alert("Informe o número da conta do responsável.");
             return;
           }
           const contaJovem = await contaAPI.criarContaJovem({
             agencia: contaData.agencia,
             titularCpfs,
             senha: contaData.senha,
-            responsavelId: Number.parseInt(contaData.responsavelId), // Alterado para responsavelId
+            numeroContaResponsavel: contaData.numeroContaResponsavel,
           });
           alert(`Conta Jovem ${contaJovem.numeroConta} criada com sucesso!`);
           break;
@@ -187,7 +187,7 @@ export function AccountOpening() {
         agencia: "0001",
         senha: "",
         limiteChequeEspecial: "",
-        responsavelId: "", // Mudado de responsavelId para responsavelContaId
+        numeroContaResponsavel: "",
       });
     } catch (error: any) {
       console.error("Erro ao criar conta:", error);
@@ -368,20 +368,19 @@ export function AccountOpening() {
 
               {tipoConta === "jovem" && (
                 <div>
-                  <Label htmlFor="responsavelContaId">
-                    ID da Conta do Responsável *
+                  <Label htmlFor="numeroContaResponsavel">
+                    Número da Conta do Responsável *
                   </Label>
                   <Input
-                    id="responsavelContaId"
-                    type="number"
-                    value={contaData.responsavelId}
+                    id="numeroContaResponsavel"
+                    value={contaData.numeroContaResponsavel}
                     onChange={(e) =>
                       setContaData({
                         ...contaData,
-                        responsavelId: e.target.value,
+                        numeroContaResponsavel: e.target.value,
                       })
                     }
-                    placeholder="ID da conta (não do cliente)"
+                    placeholder="Número da conta"
                     required
                   />
                 </div>
@@ -401,7 +400,7 @@ export function AccountOpening() {
                     agencia: "0001",
                     senha: "",
                     limiteChequeEspecial: "",
-                    responsavelId: "", // Mudado de responsavelId para responsavelContaId
+                    numeroContaResponsavel: "",
                   });
                 }}
               >

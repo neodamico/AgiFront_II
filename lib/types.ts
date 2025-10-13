@@ -72,7 +72,6 @@ export interface GerenteRequest {
 
 export interface ClienteRequest {
   nomeCompleto: string
-  senha: string
   email: string
   cpf: string
   gerenteId?: number
@@ -86,7 +85,7 @@ export interface ClienteRequest {
   profissao: string
   empresaAtual: string
   cargo: string
-  salarioMensal: number
+  rendaMensal: number
   tempoEmprego: number
   patrimonioEstimado?: number
   possuiRestricoesBancarias: boolean
@@ -121,7 +120,7 @@ export interface ClienteUpdateRequest {
   profissao?: string
   empresaAtual?: string
   cargo?: string
-  salarioMensal?: number
+  rendaMensal?: number
   tempoEmprego?: number
   patrimonioEstimado?: number
   possuiRestricoesBancarias?: boolean
@@ -172,7 +171,7 @@ export interface ContaJovemRequest {
   agencia: string
   titularCpfs: string[]
   senha: string
-  responsavelId: number // Mudado de responsavelId para responsavelContaId (ID da conta do responsável)
+  numeroContaResponsavel: string 
 }
 
 export interface ContaGlobalRequest {
@@ -242,7 +241,7 @@ export interface ClienteResponse {
   profissao: string
   empresaAtual: string
   cargo: string
-  salarioMensal: number
+  rendaMensal: number
   tempoEmprego: number
   patrimonioEstimado: number
   possuiRestricoesBancarias: boolean
@@ -274,6 +273,7 @@ export interface ContaCorrenteResponse {
   titularCpfs: string[]
   statusConta: StatusConta
   tipoConta: string
+  segmentoCliente?: SegmentoCliente;
 }
 
 export interface ContaPoupResponse {
@@ -294,10 +294,11 @@ export interface ContaJovemResponse {
   numeroConta: string
   agencia: string
   saldo: number
-  responsavelId: number 
+  numeroContaResponsavel: string 
   titularCpfs: string[]
   statusConta: StatusConta
   tipoConta: string
+  segmentoCliente?: SegmentoCliente;
 }
 
 export interface ContaGlobalResponse {
@@ -310,6 +311,7 @@ export interface ContaGlobalResponse {
   titularCpfs: string[]
   statusConta: StatusConta
   tipoConta: string
+  segmentoCliente?: SegmentoCliente;
 }
 
 export interface ContaUpdateResponse {

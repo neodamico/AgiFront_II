@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Search, CreditCard } from "lucide-react"
-import { clienteAPI, formatarCPF, validarCPF } from "@/lib/api"
+import { clienteAPI, contaAPI, formatarCPF, validarCPF } from "@/lib/api" 
 
 export function AccountSearch() {
   const [cpf, setCpf] = useState("")
@@ -26,21 +26,26 @@ export function AccountSearch() {
     }
 
     setLoading(true)
+    setContas([]) // Limpa a lista antes de uma nova busca
+
     try {
-      const cliente = await clienteAPI.buscarPorCpf(cpf.replace(/\D/g, ""))
+      const cpfLimpo = cpf.replace(/\D/g, "")
+
+      // 1. Busca os dados do cliente para exibir o nome
+      const cliente = await clienteAPI.buscarPorCpf(cpfLimpo)
       if (!cliente) {
         alert("Cliente não encontrado")
-        setContas([])
+        setClienteNome("")
         return
       }
-
       setClienteNome(cliente.nomeCompleto)
 
-      // Buscar todas as contas do cliente
-      // Por enquanto, vamos simular já que não temos endpoint específico
-      // TODO: Implementar endpoint no backend para buscar contas por cliente
-      alert("Funcionalidade de busca de contas por CPF será implementada quando o backend disponibilizar o endpoint")
-      setContas([])
+      // 2. Chama a API do backend para buscar as contas
+      const contasEncontradas = await contaAPI.buscarPorCpf(cpfLimpo)
+
+      // 3. Atualiza o estado com as contas encontradas
+      setContas(contasEncontradas)
+
     } catch (error) {
       console.error("Erro ao buscar contas:", error)
       alert("Erro ao buscar contas")

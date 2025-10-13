@@ -27,7 +27,6 @@ export function CustomerRegistration() {
     nomePai: "",
     nomeMae: "",
     email: "",
-    senha: "",
     estadoCivil: "",
     nomeConjuge: "",
     dataNascConjuge: "",
@@ -37,7 +36,7 @@ export function CustomerRegistration() {
     profissao: "",
     empresaAtual: "",
     cargo: "",
-    salarioMensal: "",
+    rendaMensal: "",
     tempoEmprego: "",
     patrimonioEstimado: "",
     restricoesBancarias: false,
@@ -126,7 +125,6 @@ export function CustomerRegistration() {
 
       const clienteData: ClienteRequest = {
         nomeCompleto: `${formData.nome} ${formData.sobrenome}`,
-        senha: formData.senha || "senha123",
         email: formData.email,
         cpf: formData.cpf.replace(/\D/g, ""),
         gerenteId: Number(gerenteId),
@@ -140,7 +138,7 @@ export function CustomerRegistration() {
         profissao: formData.profissao,
         empresaAtual: formData.empresaAtual,
         cargo: formData.cargo,
-        salarioMensal: Number(formData.salarioMensal),
+        rendaMensal: Number(formData.rendaMensal),
         tempoEmprego: Number(formData.tempoEmprego),
         patrimonioEstimado: formData.patrimonioEstimado ? Number(formData.patrimonioEstimado) : 0,
         possuiRestricoesBancarias: formData.restricoesBancarias,
@@ -179,7 +177,6 @@ export function CustomerRegistration() {
         nomePai: "",
         nomeMae: "",
         email: "",
-        senha: "",
         estadoCivil: "",
         nomeConjuge: "",
         dataNascConjuge: "",
@@ -187,7 +184,7 @@ export function CustomerRegistration() {
         profissao: "",
         empresaAtual: "",
         cargo: "",
-        salarioMensal: "",
+        rendaMensal: "",
         tempoEmprego: "",
         patrimonioEstimado: "",
         restricoesBancarias: false,
@@ -370,18 +367,6 @@ export function CustomerRegistration() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="senha">Senha *</Label>
-                  <Input
-                    id="senha"
-                    type="password"
-                    value={formData.senha}
-                    onChange={(e) => setFormData({ ...formData, senha: e.target.value })}
-                    placeholder="Senha do cliente"
-                    required
-                    disabled={loading}
-                  />
-                </div>
-                <div>
                   <Label htmlFor="estadoCivil">Estado Civil *</Label>
                   <Select
                     value={formData.estadoCivil}
@@ -473,12 +458,12 @@ export function CustomerRegistration() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="salarioMensal">Salário Mensal *</Label>
+                  <Label htmlFor="rendaMensal">Salário Mensal *</Label>
                   <Input
-                    id="salarioMensal"
+                    id="rendaMensal"
                     type="number"
-                    value={formData.salarioMensal}
-                    onChange={(e) => setFormData({ ...formData, salarioMensal: e.target.value })}
+                    value={formData.rendaMensal}
+                    onChange={(e) => setFormData({ ...formData, rendaMensal: e.target.value })}
                     placeholder="R$ 0,00"
                     required
                     disabled={loading}
