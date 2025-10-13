@@ -240,6 +240,12 @@ export const contaAPI = {
     })
   },
 
+  buscarPorCpf: async (cpf: string): Promise<any[]> => {
+    return fetchAPI<any[]>(`/contas/buscar-por-cpf/${cpf}`, {
+      method: "GET",
+    });
+  },
+
   consultarSaldo: async (numeroConta: string): Promise<number> => {
     const conta = await contaAPI.buscarPorNumeroConta(numeroConta)
     return conta.saldo || 0

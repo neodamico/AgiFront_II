@@ -48,7 +48,7 @@ export function CustomerSearch() {
     profissao: "",
     empresaAtual: "",
     cargo: "",
-    salarioMensal: 0,
+    rendaMensal: 0,
     tempoEmprego: 0,
     patrimonioEstimado: 0,
     possuiRestricoesBancarias: false,
@@ -88,7 +88,7 @@ export function CustomerSearch() {
           profissao: clienteEncontrado.profissao,
           empresaAtual: clienteEncontrado.empresaAtual,
           cargo: clienteEncontrado.cargo,
-          salarioMensal: clienteEncontrado.salarioMensal ?? 0,
+          rendaMensal: clienteEncontrado.rendaMensal ?? 0,
           tempoEmprego: clienteEncontrado.tempoEmprego ?? 0,
           patrimonioEstimado: clienteEncontrado.patrimonioEstimado ?? 0,
           possuiRestricoesBancarias:
@@ -178,7 +178,7 @@ const handleUpdate = async (e: React.FormEvent) => {
         profissao: cliente.profissao,
         empresaAtual: cliente.empresaAtual,
         cargo: cliente.cargo,
-        salarioMensal: cliente.salarioMensal ?? 0,
+        rendaMensal: cliente.rendaMensal ?? 0,
         tempoEmprego: cliente.tempoEmprego ?? 0,
         patrimonioEstimado: cliente.patrimonioEstimado ?? 0,
         possuiRestricoesBancarias: cliente.possuiRestricoesBancarias,
@@ -357,7 +357,7 @@ const handleUpdate = async (e: React.FormEvent) => {
                       </Label>
                       <p className="text-base mt-1">
                         R${" "}
-                        {(cliente.salarioMensal ?? 0).toLocaleString("pt-BR", {
+                        {(cliente.rendaMensal ?? 0).toLocaleString("pt-BR", {
                           minimumFractionDigits: 2,
                         })}
                       </p>
@@ -657,16 +657,16 @@ const handleUpdate = async (e: React.FormEvent) => {
                       />
                     </div>
                     <div className="form-section p-3 rounded-lg">
-                      <Label htmlFor="salarioMensal">Salário Mensal</Label>
+                      <Label htmlFor="rendaMensal">Salário Mensal</Label>
                       <Input
-                        id="salarioMensal"
+                        id="rendaMensal"
                         type="number"
                         step="0.01"
-                        value={editData.salarioMensal}
+                        value={editData.rendaMensal}
                         onChange={(e) =>
                           setEditData({
                             ...editData,
-                            salarioMensal: parseFloat(e.target.value),
+                            rendaMensal: parseFloat(e.target.value),
                           })
                         }
                         required
