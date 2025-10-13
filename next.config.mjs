@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'export',
+  // Remove 'output: export' para Render - use apenas para GitHub Pages
+  // output: 'export',
   basePath: process.env.GITHUB_PAGES ? '/AgiFront_II' : '',
   eslint: {
     ignoreDuringBuilds: true,
