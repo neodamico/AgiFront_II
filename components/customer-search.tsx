@@ -103,8 +103,7 @@ export function CustomerSearch() {
     } catch (error) {
       console.error("Erro ao buscar cliente:", error);
       alert(
-        `Erro ao buscar cliente: ${
-          error instanceof Error ? error.message : "Erro desconhecido"
+        `Erro ao buscar cliente: ${error instanceof Error ? error.message : "Erro desconhecido"
         }`
       );
     } finally {
@@ -112,56 +111,56 @@ export function CustomerSearch() {
     }
   };
 
-const handleUpdate = async (e: React.FormEvent) => {
-  e.preventDefault()
-  if (!cliente) return
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!cliente) return
 
-  setLoading(true)
-  try {
-    // Pegar o primeiro endereço de editData.enderecos (ou objeto padrão se vazio)
-    const endereco = editData.enderecos && editData.enderecos.length > 0 ? editData.enderecos[0] : {
-      cep: "",
-      logradouro: "",
-      numero: "",
-      complemento: "",
-      bairro: "",
-      cidade: "",
-      estado: "",
-      tipoEndereco: "RESIDENCIAL",
-      idEndereco: 0, // Valor padrão, ajuste se necessário
-      clienteId: cliente.id,
+    setLoading(true)
+    try {
+      // Pegar o primeiro endereço de editData.enderecos (ou objeto padrão se vazio)
+      const endereco = editData.enderecos && editData.enderecos.length > 0 ? editData.enderecos[0] : {
+        cep: "",
+        logradouro: "",
+        numero: "",
+        complemento: "",
+        bairro: "",
+        cidade: "",
+        estado: "",
+        tipoEndereco: "RESIDENCIAL",
+        idEndereco: 0, // Valor padrão, ajuste se necessário
+        clienteId: cliente.id,
+      }
+
+      // Construir o corpo da requisição no formato esperado pela API
+      const dadosParaEnviar = {
+        ...editData,
+        cep: endereco.cep ?? "",
+        logradouro: endereco.logradouro ?? "",
+        numero: endereco.numero ?? "",
+        complemento: endereco.complemento ?? "",
+        bairro: endereco.bairro ?? "", // Garante que bairro não seja null
+        cidade: endereco.cidade ?? "",
+        estado: endereco.estado ?? "",
+        tipoEndereco: endereco.tipoEndereco ?? "RESIDENCIAL",
+        // Remover a propriedade enderecos para evitar conflito com o formato esperado
+        enderecos: undefined,
+      }
+
+      // Log para debugar os dados enviados
+      console.log("Dados enviados para a API:", dadosParaEnviar)
+
+      const clienteAtualizado = await clienteAPI.atualizar(cliente.id, dadosParaEnviar)
+
+      setCliente(clienteAtualizado)
+      setEditing(false)
+      alert("Cliente atualizado com sucesso!")
+    } catch (error) {
+      console.error("Erro ao atualizar cliente:", error)
+      alert(`Erro ao atualizar cliente: ${error instanceof Error ? error.message : "Erro desconhecido"}`)
+    } finally {
+      setLoading(false)
     }
-
-    // Construir o corpo da requisição no formato esperado pela API
-    const dadosParaEnviar = {
-      ...editData,
-      cep: endereco.cep ?? "",
-      logradouro: endereco.logradouro ?? "",
-      numero: endereco.numero ?? "",
-      complemento: endereco.complemento ?? "",
-      bairro: endereco.bairro ?? "", // Garante que bairro não seja null
-      cidade: endereco.cidade ?? "",
-      estado: endereco.estado ?? "",
-      tipoEndereco: endereco.tipoEndereco ?? "RESIDENCIAL",
-      // Remover a propriedade enderecos para evitar conflito com o formato esperado
-      enderecos: undefined,
-    }
-
-    // Log para debugar os dados enviados
-    console.log("Dados enviados para a API:", dadosParaEnviar)
-
-    const clienteAtualizado = await clienteAPI.atualizar(cliente.id, dadosParaEnviar)
-
-    setCliente(clienteAtualizado)
-    setEditing(false)
-    alert("Cliente atualizado com sucesso!")
-  } catch (error) {
-    console.error("Erro ao atualizar cliente:", error)
-    alert(`Erro ao atualizar cliente: ${error instanceof Error ? error.message : "Erro desconhecido"}`)
-  } finally {
-    setLoading(false)
   }
-}
 
   const handleCancelEdit = () => {
     if (cliente) {
@@ -259,10 +258,6 @@ const handleUpdate = async (e: React.FormEvent) => {
                     <span>Dados Pessoais</span>
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div className="form-section p-3 rounded-lg">
-                      <Label className="text-sm font-semibold">ID</Label>
-                      <p className="text-base mt-1">{cliente.id}</p>
-                    </div>
                     <div className="form-section p-3 rounded-lg">
                       <Label className="text-sm font-semibold">
                         Nome Completo

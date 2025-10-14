@@ -171,7 +171,7 @@ export interface ContaJovemRequest {
   agencia: string
   titularCpfs: string[]
   senha: string
-  numeroContaResponsavel: string 
+  numeroContaResponsavel: string
 }
 
 export interface ContaGlobalRequest {
@@ -205,6 +205,18 @@ export interface SaqueRequest {
   contaId: number
   valor: number
   senha: string
+  motivoMovimentacao?: string
+}
+
+export interface SaqueInternacionalRequest {
+  contaId: number
+  valorDolares: number
+  motivoMovimentacao?: string
+}
+
+export interface DepositoInternacionalRequest {
+  contaId: number
+  valorDolares: number
   motivoMovimentacao?: string
 }
 
@@ -294,7 +306,7 @@ export interface ContaJovemResponse {
   numeroConta: string
   agencia: string
   saldo: number
-  numeroContaResponsavel: string 
+  numeroContaResponsavel: string
   titularCpfs: string[]
   statusConta: StatusConta
   tipoConta: string
