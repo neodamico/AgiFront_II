@@ -237,6 +237,13 @@ export interface GerenteResponse {
   email: string
   matricula: string
 }
+// Define a estrutura para o Documento que virá na resposta do Cliente
+export interface DocumentoResponse {
+    nomeArquivo: string;
+    tipoArquivo: string;
+    // Se você adicionou o 'id' ou outros campos ao seu DTO de Documento no backend,
+    // inclua-os aqui também (ex: id: number;).
+}
 
 export interface ClienteResponse {
   id: number
@@ -261,6 +268,7 @@ export interface ClienteResponse {
   role: UserRole
   enderecos: EnderecoResponse[]
   telefoneResponse: TelefoneResponse
+  documento?: DocumentoResponse;
 }
 
 export interface EnderecoResponse {

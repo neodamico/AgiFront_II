@@ -433,6 +433,50 @@ export function CustomerSearch() {
                   </div>
                 )}
 
+                {/* Documento RG */}
+                {cliente.documento && (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3 text-primary flex items-center space-x-2">
+                      <FileText className="w-5 h-5" />
+                      <span>Documento de Identificação</span>
+                    </h3>
+                  
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="form-section p-3 rounded-lg">
+                        <Label className="text-sm font-semibold">
+                          Nome do Arquivo
+                        </Label>
+                        <p className="text-base mt-1">
+                          {cliente.documento.nomeArquivo}
+                        </p>
+                      </div>
+                      <div className="form-section p-3 rounded-lg">
+                        <Label className="text-sm font-semibold">
+                          Tipo de Arquivo
+                        </Label>
+                        <p className="text-base mt-1">
+                          {cliente.documento.tipoArquivo}
+                        </p>
+                      </div>
+                    
+                      <div className="form-section p-3 rounded-lg flex items-end">
+                        <a
+                          // Monta a URL para o novo endpoint do backend
+                          href={`http://localhost:8080/api/v1/clientes/${cliente.id}/documento`}
+                          target="_blank" // Abre em uma nova aba
+                          rel="noopener noreferrer"
+                          download={cliente.documento.nomeArquivo} // Sugere o nome do arquivo
+                        >
+                        <Button variant="outline" size="sm">
+                          Visualizar / Baixar
+                        </Button>
+                        </a>
+                      </div>
+                    </div>
+                
+                  </div>
+                )}
+
                 {/* Endereços */}
                 {cliente.enderecos && cliente.enderecos.length > 0 && (
                   <div>
@@ -704,6 +748,7 @@ export function CustomerSearch() {
                     </div>
                   </div>
                 </div>
+                
 
                 {/* Informações Bancárias */}
                 <div>
