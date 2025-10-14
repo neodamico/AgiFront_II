@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { LogOut, User, CreditCard, Repeat, DollarSign, UserX, Search, FileSearch } from "lucide-react"
+import { LogOut, User, CreditCard, Repeat, DollarSign, UserX, Search, FileSearch, LayoutGridIcon  } from "lucide-react"
 import { CustomerRegistration } from "@/components/customer-registration"
 import { CustomerSearch } from "@/components/customer-search"
 import { AccountOpening } from "@/components/account-opening"
@@ -11,8 +11,9 @@ import { AccountSearch } from "@/components/account-search"
 import { AutoDebit } from "@/components/auto-debit"
 import { BankingTransactions } from "@/components/banking-transactions"
 import { AccountClosure } from "@/components/account-closure"
+import  Dashboard  from "@/components/dashboard/Dashboard";
 
-type TabType = "home" | "customer" | "search" | "account" | "accountSearch" | "debit" | "transactions" | "closure"
+type TabType = "home" | "customer" | "search" | "account" | "accountSearch" | "debit" | "transactions" | "dashboard" | "closure"
 
 export function BankingDashboard() {
   const [activeTab, setActiveTab] = useState<TabType>("home")
@@ -29,6 +30,7 @@ export function BankingDashboard() {
     { id: "accountSearch", label: "Consultar Contas", icon: FileSearch },
     { id: "debit", label: "Débito Automático", icon: Repeat },
     { id: "transactions", label: "Transações", icon: DollarSign },
+    { id: "dashboard", label: "Dashboard", icon: LayoutGridIcon },
     { id: "closure", label: "Encerramento", icon: UserX },
   ]
 
@@ -46,6 +48,8 @@ export function BankingDashboard() {
         return <AutoDebit />
       case "transactions":
         return <BankingTransactions />
+        case "dashboard":
+            return <Dashboard />;
       case "closure":
         return <AccountClosure />
       default:
