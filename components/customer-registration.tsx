@@ -58,6 +58,8 @@ export function CustomerRegistration() {
     numeroTelefone: "",
     tipoTelefone: "",
   })
+  const [arquivo, setArquivo] = useState<File | null>(null)
+
 
   const [cpfValid, setCpfValid] = useState<boolean | null>(null)
   const [loading, setLoading] = useState(false)
@@ -113,7 +115,7 @@ export function CustomerRegistration() {
     setLoading(true)
 
     try {
-      console.log("[v0] Criando cliente...")
+      console.log("[v1] Criando cliente com arquivo(multipart/form-data)...")
 
       const gerenteId = localStorage.getItem("gerenteId")
 
@@ -124,92 +126,110 @@ export function CustomerRegistration() {
       }
 
       const clienteData: ClienteRequest = {
-        nomeCompleto: `${formData.nome} ${formData.sobrenome}`,
-        email: formData.email,
-        cpf: formData.cpf.replace(/\D/g, ""),
-        gerenteId: Number(gerenteId),
-        dataNascimento: formData.dataNascimento,
-        dataEmissaoDocumento: formData.dataEmissaoDocumento,
-        rg: formData.numeroDocumento,
-        estadoCivil: formData.estadoCivil.toUpperCase(),
-        nomeMae: formData.nomeMae,
-        nomePai: formData.nomePai || "",
-        nomeSocial: formData.nomeSocial || "",
-        profissao: formData.profissao,
-        empresaAtual: formData.empresaAtual,
-        cargo: formData.cargo,
-        rendaMensal: Number(formData.rendaMensal),
-        tempoEmprego: Number(formData.tempoEmprego),
-        patrimonioEstimado: formData.patrimonioEstimado ? Number(formData.patrimonioEstimado) : 0,
-        possuiRestricoesBancarias: formData.restricoesBancarias,
-        ePpe: formData.ppe,
-        role: "CLIENTE",
-        ddi: formData.ddi,
-        ddd: formData.ddd,
-        numeroTelefone: formData.numeroTelefone,
-        tipoTelefone: formData.tipoTelefone.toUpperCase() as TipoTelefone,
-        cep: formData.cep.replace(/\D/g, ""),
-        logradouro: formData.logradouro,
-        numero: formData.numero,
-        complemento: formData.complemento || "",
-        bairro: formData.bairro || "",
-        cidade: formData.cidade,
-        uf: formData.estado,
-        tipoEndereco: formData.tipoEndereco.toUpperCase(),
-      }
-
-      console.log("[v0] Dados do cliente:", clienteData)
-      const clienteResponse = await clienteAPI.criar(clienteData)
-      console.log("[v0] Cliente criado:", clienteResponse)
-
-      alert(`Cliente cadastrado com sucesso! ID: ${clienteResponse.id}`)
-
-      setFormData({
-        nome: "",
-        sobrenome: "",
-        dataNascimento: "",
-        dataEmissaoDocumento: "",
-        sexo: "",
-        tipoDocumento: "",
-        numeroDocumento: "",
-        cpf: "",
-        nomeSocial: "",
-        nomePai: "",
-        nomeMae: "",
-        email: "",
-        estadoCivil: "",
-        nomeConjuge: "",
-        dataNascConjuge: "",
-        cpfConjuge: "",
-        profissao: "",
-        empresaAtual: "",
-        cargo: "",
-        rendaMensal: "",
-        tempoEmprego: "",
-        patrimonioEstimado: "",
-        restricoesBancarias: false,
-        ppe: false,
-        cep: "",
-        logradouro: "",
-        numero: "",
-        complemento: "",
-        bairro: "",
-        cidade: "",
-        estado: "",
-        tipoEndereco: "",
-        ddi: "+55",
-        ddd: "",
-        numeroTelefone: "",
-        tipoTelefone: "",
-      })
-      setCpfValid(null)
-    } catch (error) {
-      console.error("[v0] Erro ao cadastrar cliente:", error)
-      const errorMessage = error instanceof Error ? error.message : "Erro desconhecido"
-      alert(`Erro ao cadastrar cliente: ${errorMessage}`)
-    } finally {
-      setLoading(false)
+      nomeCompleto: `${formData.nome} ${formData.sobrenome}`,
+      email: formData.email,
+      cpf: formData.cpf.replace(/\D/g, ""),
+      gerenteId: Number(gerenteId),
+      dataNascimento: formData.dataNascimento,
+      dataEmissaoDocumento: formData.dataEmissaoDocumento,
+      rg: formData.numeroDocumento,
+      estadoCivil: formData.estadoCivil.toUpperCase(),
+      nomeMae: formData.nomeMae,
+      nomePai: formData.nomePai || "",
+      nomeSocial: formData.nomeSocial || "",
+      profissao: formData.profissao,
+      empresaAtual: formData.empresaAtual,
+      cargo: formData.cargo,
+      rendaMensal: Number(formData.rendaMensal),
+      tempoEmprego: Number(formData.tempoEmprego),
+      patrimonioEstimado: formData.patrimonioEstimado ? Number(formData.patrimonioEstimado) : 0,
+      possuiRestricoesBancarias: formData.restricoesBancarias,
+      ePpe: formData.ppe,
+      role: "CLIENTE",
+      ddi: formData.ddi,
+      ddd: formData.ddd,
+      numeroTelefone: formData.numeroTelefone,
+      tipoTelefone: formData.tipoTelefone.toUpperCase() as TipoTelefone,
+      cep: formData.cep.replace(/\D/g, ""),
+      logradouro: formData.logradouro,
+      numero: formData.numero,
+      complemento: formData.complemento || "",
+      bairro: formData.bairro || "",
+      cidade: formData.cidade,
+      uf: formData.estado,
+      tipoEndereco: formData.tipoEndereco.toUpperCase(),
     }
+
+    // Cria o objeto FormData para enviar multipart/form-data
+    const formDataToSend = new FormData()
+    formDataToSend.append("cliente", new Blob([JSON.stringify(clienteData)], { type: "application/json" }))
+    if (arquivo) {
+      formDataToSend.append("arquivo", arquivo)
+    }
+
+    // Faz a requisição para o backend
+    const response = await fetch(`http://localhost:8080/api/v1/clientes`, {
+      method: "POST",
+      body: formDataToSend,
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(`Erro na requisição: ${errorText}`)
+    }
+
+    const clienteResponse = await response.json()
+    console.log("[v1] Cliente criado:", clienteResponse)
+    alert(`Cliente cadastrado com sucesso! ID: ${clienteResponse.id}`)
+
+    // Reseta o formulário
+    setFormData({
+      nome: "",
+      sobrenome: "",
+      dataNascimento: "",
+      dataEmissaoDocumento: "",
+      sexo: "",
+      tipoDocumento: "",
+      numeroDocumento: "",
+      cpf: "",
+      nomeSocial: "",
+      nomePai: "",
+      nomeMae: "",
+      email: "",
+      estadoCivil: "",
+      nomeConjuge: "",
+      dataNascConjuge: "",
+      cpfConjuge: "",
+      profissao: "",
+      empresaAtual: "",
+      cargo: "",
+      rendaMensal: "",
+      tempoEmprego: "",
+      patrimonioEstimado: "",
+      restricoesBancarias: false,
+      ppe: false,
+      cep: "",
+      logradouro: "",
+      numero: "",
+      complemento: "",
+      bairro: "",
+      cidade: "",
+      estado: "",
+      tipoEndereco: "",
+      ddi: "+55",
+      ddd: "",
+      numeroTelefone: "",
+      tipoTelefone: "",
+    })
+    setArquivo(null)
+    setCpfValid(null)
+  } catch (error) {
+    console.error("[v1] Erro ao cadastrar cliente:", error)
+    const errorMessage = error instanceof Error ? error.message : "Erro desconhecido"
+    alert(`Erro ao cadastrar cliente: ${errorMessage}`)
+  } finally {
+    setLoading(false)
+  }
   }
 
   return (
@@ -312,6 +332,21 @@ export function CustomerRegistration() {
                     required
                     disabled={loading}
                   />
+                </div>
+                <div>
+                  <Label htmlFor="arquivo">Documento (RG / CNH / Passaporte)</Label>
+                  <Input
+                    id="arquivo"
+                    type="file"
+                    accept=".pdf,.png,.jpg,.jpeg"
+                    onChange={(e) => setArquivo(e.target.files?.[0] || null)}
+                    disabled={loading}
+                  />
+                  {arquivo && (
+                    <p className="text-sm text-gray-500 mt-1">
+                      Arquivo selecionado: {arquivo.name}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <Label htmlFor="cpf">CPF *</Label>
