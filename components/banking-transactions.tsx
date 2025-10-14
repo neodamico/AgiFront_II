@@ -8,20 +8,23 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DollarSign, FileText, Lock, X, Search, CheckCircle, AlertTriangle } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"; // Adicionado DialogFooter
-import { api, contaAPI, formatarNumeroConta } from "@/lib/api";
-import type { TransacaoResponse } from "@/lib/types";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { api, contaAPI, formatarNumeroConta } from "../lib/api";
+import type { TransacaoResponse, SaqueRequest, DepositoRequest, TransferenciaRequest, SaqueInternacionalRequest, DepositoInternacionalRequest } from "../lib/types";
+
+// --- Tipos de Transação ---
+type TransacaoTipo = "saque" | "deposito" | "transferencia" | "saque_internacional" | "deposito_internacional";
 
 // Tipo auxiliar para armazenar dados da transação antes da confirmação de senha
 interface TransactionPayload {
-  tipoTransacao: string;
+  tipoTransacao: TransacaoTipo;
   contaOrigemId: number;
   contaDestinoId?: number;
   valor: number;
   motivoMovimentacao: string;
 }
 
-// NOVO TIPO: Para o modal de feedback
+// Tipo para o modal de feedback
 interface FeedbackState {
   show: boolean;
   title: string;
@@ -29,14 +32,21 @@ interface FeedbackState {
   type: 'success' | 'error';
 }
 
-/**
- * Função utilitária para formatar mensagens de erro do backend para serem amigáveis ao usuário.
- * @param error O objeto de erro (geralmente com a propriedade 'message').
- * @returns Uma string de erro amigável.
- */
+// Função utilitária para formatar mensagens de erro do backend para serem amigáveis ao usuário.
 const formatErrorMessage = (error: any): string => {
   let errorMessage = "Ocorreu uma falha inesperada. Tente novamente.";
-  const errorMsg = error?.message || '';
+  // Tenta extrair a mensagem de erro da resposta JSON se existir, ou usa a string de erro
+  let errorMsg = error?.message || '';
+
+  // Tenta extrair a mensagem do corpo da resposta JSON da API, que pode vir como string
+  if (errorMsg.startsWith('{') && errorMsg.endsWith('}')) {
+    try {
+      const errorJson = JSON.parse(errorMsg);
+      errorMsg = errorJson.message || errorMsg;
+    } catch (e) {
+      // Ignora se não for JSON válido
+    }
+  }
 
   if (errorMsg.includes("401") || errorMsg.toLowerCase().includes("senha")) {
     errorMessage = "Senha incorreta. Por favor, verifique a senha da conta e tente novamente.";
@@ -44,6 +54,9 @@ const formatErrorMessage = (error: any): string => {
     errorMessage = "Conta não encontrada com o número informado.";
   } else if (errorMsg.toLowerCase().includes("saldo insuficiente")) {
     errorMessage = "Saldo insuficiente para realizar esta transação.";
+    // Tratamento específico para saldo em dólar insuficiente
+  } else if (errorMsg.toLowerCase().includes("saldo em dólares insuficiente")) {
+    errorMessage = "Saldo em dólares (US$) insuficiente na conta global para realizar o saque.";
   } else if (errorMsg) {
     // Tenta limpar a mensagem de erro padrão da API, removendo prefixos técnicos
     let cleanMessage = errorMsg.replace(/^(Erro ao processar transação: |Falha na validação dos dados: |Erro: )/i, '').trim();
@@ -56,7 +69,7 @@ const formatErrorMessage = (error: any): string => {
 
 export function BankingTransactions() {
   const [transactionData, setTransactionData] = useState({
-    tipoTransacao: "",
+    tipoTransacao: "" as TransacaoTipo | "",
     numeroConta: "",
     valor: "",
     senha: "", // Senha será usada apenas no modal/momento da transação
@@ -67,6 +80,7 @@ export function BankingTransactions() {
   const [saldo, setSaldo] = useState<number | null>(null);
   // Estado para armazenar o limite do cheque especial
   const [limiteChequeEspecial, setLimiteChequeEspecial] = useState<number | null>(null);
+  // O TransacaoResponse precisa ser atualizado externamente para incluir os novos tipos de transação (SAQUE_INTERNACIONAL, DEPOSITO_INTERNACIONAL)
   const [extrato, setExtrato] = useState<TransacaoResponse[]>([]);
   const [showExtrato, setShowExtrato] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -86,7 +100,7 @@ export function BankingTransactions() {
     type: 'success',
   });
 
-  // NOVA FUNÇÃO: Exibe o modal de feedback
+  // Exibe o modal de feedback
   const showFeedback = (title: string, message: string, type: 'success' | 'error' = 'success') => {
     setFeedback({ show: true, title, message, type });
   };
@@ -94,7 +108,7 @@ export function BankingTransactions() {
   // Função de reset para limpar todos os estados relevantes
   const resetForm = () => {
     setTransactionData({
-      tipoTransacao: "",
+      tipoTransacao: "" as TransacaoTipo | "",
       numeroConta: "",
       valor: "",
       senha: "",
@@ -102,11 +116,11 @@ export function BankingTransactions() {
       motivoMovimentacao: "",
     });
     setSaldo(null);
-    setLimiteChequeEspecial(null); // Limpa o limite
+    setLimiteChequeEspecial(null); 
     setShowExtrato(false);
     setPendingPayload(null);
     setShowPasswordModal(false);
-    setNsuFiltro(""); // Limpa o filtro de NSU
+    setNsuFiltro(""); 
   };
 
 
@@ -129,7 +143,6 @@ export function BankingTransactions() {
       setLimiteChequeEspecial(contaDetalhes.limiteChequeEspecial || 0);
 
     } catch (error: any) {
-      // Agora usa a função formatErrorMessage
       showFeedback("Erro ao Consultar Saldo", formatErrorMessage(error), "error");
       setSaldo(null);
       setLimiteChequeEspecial(null); // Limpa o limite em caso de erro
@@ -140,7 +153,6 @@ export function BankingTransactions() {
 
   const consultarExtrato = async () => {
     if (!transactionData.numeroConta) {
-      // Feedback de erro (NOVO: Modal)
       showFeedback("Erro de Validação", "Por favor, informe o número da conta para consultar o extrato.", "error");
       return;
     }
@@ -156,7 +168,6 @@ export function BankingTransactions() {
       setNsuFiltro(""); // Reseta o filtro ao carregar novo extrato
 
     } catch (error: any) {
-      // Agora usa a função formatErrorMessage
       showFeedback("Erro ao Consultar Extrato", formatErrorMessage(error), "error");
       setExtrato([]);
     } finally {
@@ -168,14 +179,12 @@ export function BankingTransactions() {
   const handleFinalSubmission = async () => {
     // Validação da senha no frontend (complementa a validação do backend)
     if (!pendingPayload || !transactionData.senha || transactionData.senha.length !== 6 || !/^\d{6}$/.test(transactionData.senha)) {
-      // MENSAGEM PADRONIZADA DE ERRO
       showFeedback("Erro de Validação", "A senha deve conter exatamente 6 dígitos numéricos.", "error");
       return;
     }
 
     const gerenteId = localStorage.getItem("gerenteId");
     if (!gerenteId) {
-      // MENSAGEM PADRONIZADA DE ERRO
       showFeedback("Erro de Autenticação", "Gerente não identificado. Faça login novamente.", "error");
       return;
     }
@@ -189,8 +198,8 @@ export function BankingTransactions() {
       let title = "";
       let description = "";
 
-      // Monta o payload final com a senha
-      const finalPayload = {
+      // Monta o payload final com a senha para transações nacionais
+      const finalPayloadNacional = {
         motivoMovimentacao: pendingPayload.motivoMovimentacao,
         senha: senha,
         valor: valor,
@@ -199,7 +208,7 @@ export function BankingTransactions() {
       switch (pendingPayload.tipoTransacao) {
         case "saque":
           response = await api.transacoes.realizarSaque(
-            { contaId: pendingPayload.contaOrigemId, ...finalPayload },
+            { contaId: pendingPayload.contaOrigemId, ...finalPayloadNacional },
             Number.parseInt(gerenteId)
           );
           title = "Saque Concluído";
@@ -211,23 +220,41 @@ export function BankingTransactions() {
             {
               contaOrigemId: pendingPayload.contaOrigemId,
               contaDestinoId: pendingPayload.contaDestinoId!,
-              ...finalPayload
+              ...finalPayloadNacional
             },
             Number.parseInt(gerenteId)
           );
           title = "Transferência Concluída";
           description = `Transferência de R$ ${valor.toFixed(2)} realizada com sucesso! NSU: ${response.nsUnico}`;
           break;
+
+        case "saque_internacional":
+          // Saque Internacional: O payload usa valorDolares
+          const finalPayloadSaqueInternacional: SaqueInternacionalRequest = {
+            motivoMovimentacao: pendingPayload.motivoMovimentacao,
+            valorDolares: valor,
+            contaId: pendingPayload.contaOrigemId,
+          };
+
+          response = await api.transacoes.realizarSaqueInternacional(
+            finalPayloadSaqueInternacional,
+            Number.parseInt(gerenteId)
+          );
+
+          title = "Saque Internacional Concluído";
+          description = `Saque de US$ ${valor.toFixed(2)} realizado com sucesso! NSU: ${response.nsUnico}`;
+          break;
       }
 
-      // Exibe modal de sucesso (NOVO: Modal)
+      // Exibe modal de sucesso
       showFeedback(title, description, "success");
 
+      // Após a transação, consulte o saldo novamente para refletir a alteração
+      consultarSaldo();
       resetForm();
 
     } catch (error: any) {
       console.error("Erro na transação final:", error);
-      // Agora usa a função formatErrorMessage
       showFeedback("Falha na Transação", formatErrorMessage(error), "error");
     } finally {
       setLoading(false);
@@ -241,20 +268,19 @@ export function BankingTransactions() {
     e.preventDefault();
 
     // Validação do Motivo de Movimentação (75 caracteres)
+    const MAX_CHARS_MOTIVO = 75;
     if (transactionData.motivoMovimentacao.length > MAX_CHARS_MOTIVO) {
       showFeedback("Erro de Validação", "O motivo da movimentação não pode exceder 75 caracteres.", "error");
       return;
     }
 
     if (!transactionData.tipoTransacao || !transactionData.numeroConta || !transactionData.valor) {
-      // MENSAGEM PADRONIZADA DE ERRO
       showFeedback("Erro de Validação", "Por favor, preencha todos os campos obrigatórios.", "error");
       return;
     }
 
     const gerenteId = localStorage.getItem("gerenteId");
     if (!gerenteId) {
-      // MENSAGEM PADRONIZADA DE ERRO
       showFeedback("Erro de Autenticação", "Gerente não identificado. Faça login novamente.", "error");
       return;
     }
@@ -265,13 +291,23 @@ export function BankingTransactions() {
       const valor = Number.parseFloat(transactionData.valor);
       const numeroLimpo = transactionData.numeroConta.replace(/\D/g, "");
       const numeroFormatado = formatarNumeroConta(numeroLimpo);
-      // Busca a conta de origem para pegar o ID
+      // Busca a conta de origem para pegar o ID E O TIPO DE CONTA
       const conta = await api.contas.buscarPorNumeroConta(numeroFormatado);
+
+      const isSaqueInternacional = transactionData.tipoTransacao === "saque_internacional";
+      const isDepositoInternacional = transactionData.tipoTransacao === "deposito_internacional";
+      const isTransacaoInternacional = isSaqueInternacional || isDepositoInternacional;
+
+      // LÓGICA DE VALIDAÇÃO: Adição da validação de tipo de conta para transações internacionais
+      if (isTransacaoInternacional && conta.tipoConta !== "GLOBAL") { // Contas Internacionais são do tipo GLOBAL
+        showFeedback("Operação Não Permitida", "Saques e depósitos internacionais só podem ser realizados em contas globais (internacionais).", "error");
+        setLoading(false);
+        return;
+      }
 
       let contaDestino;
       if (transactionData.tipoTransacao === "transferencia") {
         if (!transactionData.numeroContaDestino) {
-          // MENSAGEM PADRONIZADA DE ERRO
           showFeedback("Erro de Validação", "Por favor, informe a conta de destino para a transferência.", "error");
           setLoading(false);
           return;
@@ -286,7 +322,7 @@ export function BankingTransactions() {
         tipoTransacao: transactionData.tipoTransacao,
         valor,
         motivoMovimentacao: transactionData.motivoMovimentacao,
-        contaOrigemId: conta.id, // Para Saque/Transferência
+        contaOrigemId: conta.id, // Para Saque/Transferência/Internacional
       };
 
       if (transactionData.tipoTransacao === "transferencia" && contaDestino) {
@@ -294,25 +330,44 @@ export function BankingTransactions() {
       }
 
       // --- Executa ou Prepara a Confirmação ---
+
       if (transactionData.tipoTransacao === "deposito") {
-        // DEPÓSITO: Não exige senha, executa diretamente
+        // DEPÓSITO NACIONAL: Não exige senha, executa diretamente
         const response = await api.transacoes.realizarDeposito(
           { contaId: conta.id, valor, senha: "", motivoMovimentacao: transactionData.motivoMovimentacao },
           Number.parseInt(gerenteId)
         );
 
-        // Exibe modal de sucesso para depósito (NOVO: Modal)
         showFeedback("Depósito Concluído", `Depósito de R$ ${valor.toFixed(2)} realizado com sucesso! NSU: ${response.nsUnico}`, "success");
 
+        consultarSaldo();
+        resetForm();
+
+      } else if (isDepositoInternacional) {
+        // DEPÓSITO INTERNACIONAL: Não exige senha, executa diretamente
+        // O valor do frontend (em US$) é mapeado para 'valorDolares' na API
+        const finalPayloadDepositoInternacional: DepositoInternacionalRequest = {
+          contaId: conta.id,
+          valorDolares: valor,
+          motivoMovimentacao: transactionData.motivoMovimentacao
+        };
+
+        const response = await api.transacoes.realizarDepositoInternacional(
+          finalPayloadDepositoInternacional,
+          Number.parseInt(gerenteId)
+        );
+
+        showFeedback("Depósito Internacional Concluído", `Depósito de US$ ${valor.toFixed(2)} realizado com sucesso! NSU: ${response.nsUnico}`, "success");
+
+        consultarSaldo();
         resetForm();
 
       } else {
-        // SAQUE / TRANSFERÊNCIA: Requer senha, abre o modal
+        // SAQUE / TRANSFERÊNCIA / SAQUE INTERNACIONAL: Requer senha, abre o modal
         setPendingPayload(basePayload);
         setShowPasswordModal(true);
       }
     } catch (error: any) {
-      // Agora usa a função formatErrorMessage
       showFeedback("Falha na Pré-Transação", formatErrorMessage(error), "error");
     } finally {
       setLoading(false);
@@ -321,6 +376,9 @@ export function BankingTransactions() {
 
   const isTransfer = transactionData.tipoTransacao === "transferencia";
   const isSaque = transactionData.tipoTransacao === "saque";
+  const isSaqueInternacional = transactionData.tipoTransacao === "saque_internacional";
+  const isDepositoInternacional = transactionData.tipoTransacao === "deposito_internacional";
+  const isTransacaoInternacional = isSaqueInternacional || isDepositoInternacional;
 
   // Função para filtrar as transações
   const transacoesFiltradas = extrato.filter(transacao =>
@@ -364,7 +422,7 @@ export function BankingTransactions() {
                       </Button>
                     )}
                   </div>
-                  {/* Lógica de exibição de saldo e cheque especial */}
+                  {/* Lógica de exibição de saldo e cheque especial (apenas para saque nacional) */}
                   {saldo !== null && isSaque && (
                     <p className="text-sm mt-1 flex flex-col sm:flex-row sm:items-baseline">
                       {(() => {
@@ -430,9 +488,9 @@ export function BankingTransactions() {
                   <div className="min-h-9" aria-hidden="true" />
                 )}
 
-                {/* VALOR (R$)*/}
+                {/* VALOR (R$ ou US$) */}
                 <div>
-                  <Label htmlFor="valor">Valor (R$) *</Label>
+                  <Label htmlFor="valor">Valor ({isTransacaoInternacional ? "US$" : "R$"}) *</Label>
                   <Input
                     id="valor"
                     type="number"
@@ -449,15 +507,18 @@ export function BankingTransactions() {
                   <Label htmlFor="tipoTransacao">Tipo de Transação *</Label>
                   <Select
                     value={transactionData.tipoTransacao}
-                    onValueChange={(value) => setTransactionData({ ...transactionData, tipoTransacao: value })}
+                    onValueChange={(value) => setTransactionData({ ...transactionData, tipoTransacao: value as TransacaoTipo | "" })}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione o tipo" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="saque">Saque</SelectItem>
-                      <SelectItem value="deposito">Depósito</SelectItem>
-                      <SelectItem value="transferencia">Transferência</SelectItem>
+                      <SelectItem value="saque">Saque (R$)</SelectItem>
+                      <SelectItem value="deposito">Depósito (R$)</SelectItem>
+                      <SelectItem value="transferencia">Transferência (R$)</SelectItem>
+                      {/* NOVAS TRANSAÇÕES INTERNACIONAIS */}
+                      <SelectItem value="saque_internacional">Saque Internacional (US$)</SelectItem>
+                      <SelectItem value="deposito_internacional">Depósito Internacional (US$)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -469,7 +530,7 @@ export function BankingTransactions() {
                     id="motivoMovimentacao"
                     value={transactionData.motivoMovimentacao}
                     onChange={(e) => setTransactionData({ ...transactionData, motivoMovimentacao: e.target.value })}
-                    placeholder="Opcional (obrigatório para valores acima de R$ 10.000)"
+                    placeholder="Opcional (obrigatório para valores acima de R$ 10.000 ou US$ 2.000)"
                     maxLength={MAX_CHARS_MOTIVO} // Limite de 75 caracteres
                   />
                   {/* Contador de Caracteres */}
@@ -483,7 +544,7 @@ export function BankingTransactions() {
             {/* Consulta de Extrato */}
             {transactionData.numeroConta && (
               <div className="form-section p-4 rounded-lg">
-                <div className="flex justify-between items-center mb-4 flex-wrap gap-2"> {/* Modificado para flex-wrap */}
+                <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
                   <h3 className="text-lg font-semibold text-primary">Extrato Bancário</h3>
                   <div className="flex items-center space-x-2">
                     {/* CAMPO DE BUSCA POR NSU */}
@@ -519,7 +580,9 @@ export function BankingTransactions() {
                           : "Nenhuma transação encontrada."}
                       </p>
                     ) : (
-                      transacoesFiltradas.map((transacao) => { // Usando o array filtrado
+                      extrato.filter(transacao =>
+                        transacao.nsUnico.toLowerCase().includes(nsuFiltro.toLowerCase())
+                      ).map((transacao) => { // Usando o array filtrado
                         // Obtém o número da conta consultada
                         const numeroContaLimpo = transactionData.numeroConta.replace(/\D/g, "");
                         const numeroContaFormatado = formatarNumeroConta(numeroContaLimpo);
@@ -542,15 +605,24 @@ export function BankingTransactions() {
                         }
 
                         // Determina se a transação é uma entrada
+                        // Os tipos de transacao do extrato vêm em UPPERCASE do backend (Enums)
+                        const transacaoTipoUpper = transacao.tipo.toUpperCase();
                         const isEntrada =
-                          transacao.tipo === "DEPOSITO" ||
-                          (transacao.tipo === "TRANSFERENCIA" && transacao.numeroContaDestino === numeroContaFormatado);
+                          transacaoTipoUpper === "DEPOSITO" ||
+                          transacaoTipoUpper === "DEPOSITO_INTERNACIONAL" ||
+                          transacaoTipoUpper === "TRANSFERENCIA_RECEBIDA" || // Incluindo recebida
+                          (transacaoTipoUpper === "TRANSFERENCIA" && transacao.numeroContaDestino === numeroContaFormatado);
+
+                        // Determina se a moeda é Dólar
+                        const isDolar = transacaoTipoUpper === "SAQUE_INTERNACIONAL" || transacaoTipoUpper === "DEPOSITO_INTERNACIONAL";
+                        const currencySymbol = isDolar ? "US$" : "R$";
+
 
                         return (
                           <div key={transacao.id} className="border rounded-lg p-3">
                             <div className="flex justify-between items-start">
                               <div>
-                                <p className="font-semibold">{transacao.tipo}</p>
+                                <p className="font-semibold">{transacao.tipo.replace('_', ' ')}</p>
 
                                 {/* Exibe a conta relacionada */}
                                 {contaRelacionada && (
@@ -572,8 +644,9 @@ export function BankingTransactions() {
                               <p
                                 className={`font-bold ${isEntrada ? "text-green-600" : "text-red-600"}`}
                               >
-                                {isEntrada ? "+" : "-"}R${" "}
-                                {/* Usamos Math.abs() para garantir que o valor seja sempre positivo antes de formatar */}
+                                {isEntrada ? "+" : "-"}
+                                {currencySymbol}{" "}
+                                {/* Math.abs() para garantir que o valor seja sempre positivo antes de formatar */}
                                 {Math.abs(transacao.valor).toLocaleString("pt-BR", {
                                   minimumFractionDigits: 2,
                                 })}
@@ -620,9 +693,11 @@ export function BankingTransactions() {
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <p className="text-sm text-muted-foreground">
-              {pendingPayload?.tipoTransacao === 'saque'
-                ? 'Por favor, insira a senha da conta para realizar o Saque.'
-                : 'Por favor, insira a senha da conta de origem para confirmar a Transferência.'
+              {pendingPayload?.tipoTransacao === 'saque_internacional'
+                ? 'Por favor, insira a senha da conta para realizar o Saque Internacional.'
+                : pendingPayload?.tipoTransacao === 'saque'
+                  ? 'Por favor, insira a senha da conta para realizar o Saque.'
+                  : 'Por favor, insira a senha da conta de origem para confirmar a Transferência.'
               }
             </p>
             <div className="grid gap-2">
@@ -653,7 +728,7 @@ export function BankingTransactions() {
         </DialogContent>
       </Dialog>
 
-      {/* NOVO: Modal de Feedback (Sucesso/Erro) */}
+      {/* Modal de Feedback (Sucesso/Erro) */}
       <Dialog open={feedback.show} onOpenChange={(open) => setFeedback({ ...feedback, show: open })}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>

@@ -25,8 +25,11 @@ import type {
   SaqueRequest,
   DebitoAutomaticoRequest,
   DebitoAutomaticoResponse,
+  SaqueInternacionalRequest,
+  DepositoInternacionalRequest,
 } from "./types"
 
+// A URL base da sua API real
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1"
 
 // Função auxiliar para fazer requisições
@@ -41,8 +44,10 @@ async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<T> 
   })
 
   if (!response.ok) {
-    const error = await response.text()
-    throw new Error(error || `HTTP error! status: ${response.status}`)
+    // Tenta ler a mensagem de erro do corpo da resposta
+    const errorText = await response.text()
+    console.error(`Erro na requisição para ${endpoint}: ${response.status} - ${errorText}`)
+    throw new Error(errorText || `HTTP error! status: ${response.status}`)
   }
 
   // Se for 204 No Content, retorna null
@@ -259,9 +264,11 @@ export const contaAPI = {
     })
   },
 
-  desativar: async (numeroConta: string): Promise<any> => {
+  // DESATIVAR CONTA 
+  desativar: async (numeroConta: string, senha: string): Promise<any> => {
     return fetchAPI<any>(`/contas/desativar/${numeroConta}`, {
       method: "PUT",
+      body: JSON.stringify({ senha: senha }), 
     })
   },
 }
@@ -284,6 +291,20 @@ export const transacaoAPI = {
 
   realizarSaque: async (data: SaqueRequest, gerenteExecutorId: number): Promise<TransacaoResponse> => {
     return fetchAPI<TransacaoResponse>(`/transacoes/saque?gerenteExecutorId=${gerenteExecutorId}`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    })
+  },
+
+  realizarSaqueInternacional: async (data: SaqueInternacionalRequest, gerenteExecutorId: number): Promise<TransacaoResponse> => {
+    return fetchAPI<TransacaoResponse>(`/transacoes/saque-internacional?gerenteExecutorId=${gerenteExecutorId}`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    })
+  },
+
+  realizarDepositoInternacional: async (data: DepositoInternacionalRequest, gerenteExecutorId: number): Promise<TransacaoResponse> => {
+    return fetchAPI<TransacaoResponse>(`/transacoes/deposito-internacional?gerenteExecutorId=${gerenteExecutorId}`, {
       method: "POST",
       body: JSON.stringify(data),
     })
