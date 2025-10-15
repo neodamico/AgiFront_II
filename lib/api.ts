@@ -27,7 +27,7 @@ import type {
   DebitoAutomaticoResponse,
   ConversaoMoedaResponse,
   SaqueDolarParaRealRequest,
-  ConversaoMoedaRequest,
+ ConversaoMoedaRequest,
 } from "./types"
 
 // A URL base da sua API real

@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import type React from "react"
 import { useState } from "react"
@@ -139,6 +139,61 @@ export function CustomerRegistration() {
     } else {
       setCpfValid(null);
     }
+  };
+
+  const handleCancel = () => {
+    // Reseta todos os estados do formulário para seus valores iniciais
+    setFormData({
+      // Dados pessoais
+      nome: "",
+      sobrenome: "",
+      dataNascimento: "",
+      dataEmissaoDocumento: "",
+      sexo: "",
+      tipoDocumento: "",
+      numeroDocumento: "",
+      cpf: "",
+      nomeSocial: "",
+      nomePai: "",
+      nomeMae: "",
+      email: "",
+      estadoCivil: "",
+      nomeConjuge: "",
+      dataNascConjuge: "",
+      cpfConjuge: "",
+      // Dados profissionais
+      profissao: "",
+      empresaAtual: "",
+      cargo: "",
+      rendaMensal: "",
+      tempoEmprego: "",
+      patrimonioEstimado: "",
+      restricoesBancarias: false,
+      ppe: false,
+      // Endereço
+      cep: "",
+      logradouro: "",
+      numero: "",
+      complemento: "",
+      bairro: "",
+      cidade: "",
+      estado: "",
+      tipoEndereco: "",
+      // Telefone
+      ddi: "+55",
+      ddd: "",
+      numeroTelefone: "",
+      tipoTelefone: "",
+    });
+
+    // Reseta outros estados relevantes
+    setArquivo(null);
+    setCpfValid(null);
+    setLoading(false);
+    setLoadingCep(false);
+
+    // Fecha o modal de feedback, se estiver aberto
+    setShowModal(false);
   };
 
   const handleCepChange = async (value: string) => {
@@ -825,7 +880,7 @@ export function CustomerRegistration() {
             </div>
 
             <div className="flex justify-end space-x-4">
-              <Button type="button" variant="outline" onClick={() => window.location.reload()} disabled={loading}>
+              <Button type="button" variant="outline" onClick={handleCancel} disabled={loading}>
                 Cancelar
               </Button>
               <Button type="submit" className="bg-primary hover:bg-primary/90" disabled={loading || !cpfValid}>
