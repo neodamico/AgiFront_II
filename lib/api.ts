@@ -32,6 +32,11 @@ import type {
 // A URL base da sua API real
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1"
 
+if (process.env.NODE_ENV === "development") {
+  console.log("🌍 API_BASE_URL atual:", API_BASE_URL)
+}
+
+
 // Função auxiliar para fazer requisições
 async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
