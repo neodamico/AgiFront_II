@@ -14,6 +14,9 @@ export enum TipoTransacao {
   DEPOSITO = "DEPOSITO",
   SAQUE = "SAQUE",
   TRANSFERENCIA = "TRANSFERENCIA",
+  CONVERSAO_MOEDA = "CONVERSAO_MOEDA",
+  DEPOSITO_INTERNACIONAL = "DEPOSITO_INTERNACIONAL",
+  SAQUE_INTERNACIONAL = "SAQUE_INTERNACIONAL",
   TRANSFERENCIA_ENVIADA = "TRANSFERENCIA_ENVIADA",
   TRANSFERENCIA_RECEBIDA = "TRANSFERENCIA_RECEBIDA",
 }
@@ -208,16 +211,17 @@ export interface SaqueRequest {
   motivoMovimentacao?: string
 }
 
-export interface SaqueInternacionalRequest {
-  contaId: number
-  valorDolares: number
-  motivoMovimentacao?: string
+export interface ConversaoMoedaRequest {
+  contaId: number;
+  valorReais: number;
+  motivoMovimentacao?: string;
 }
 
-export interface DepositoInternacionalRequest {
-  contaId: number
-  valorDolares: number
-  motivoMovimentacao?: string
+export interface SaqueDolarParaRealRequest {
+  contaId: number;
+  valorReais: number;
+  senha: string;
+  motivoMovimentacao?: string;
 }
 
 export interface DebitoAutomaticoRequest {
@@ -351,6 +355,19 @@ export interface TransacaoResponse {
   gerenteExecutorId: number
   nomeGerenteExecutor: string
   motivoMovimentacao?: string
+}
+
+export interface ConversaoMoedaResponse {
+  transacaoId: number;
+  contaId: number;
+  numeroConta: string;
+  valorReais: number;
+  valorDolares: number;
+  cotacaoUsada: number;
+  saldoReaisAtual: number;
+  saldoDolarAtual: number;
+  dataHoraConversao: string;
+  nsuOperacao: string;
 }
 
 export interface DebitoAutomaticoResponse {
