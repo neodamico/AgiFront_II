@@ -42,7 +42,7 @@ const formatErrorMessage = (error: any): string => {
   if (errorMsg.startsWith('{') && errorMsg.endsWith('}')) {
     try {
       const errorJson = JSON.parse(errorMsg);
-      errorMsg = errorJson.message || errorMsg;
+      errorMsg = errorJson.message || errorJson.message;
     } catch (e) {
       // Ignora se não for JSON válido
     }
@@ -352,6 +352,17 @@ export function BankingTransactions() {
 
   const MAX_CHARS_MOTIVO = 75;
 
+  // Lógica para cálculo do saldo, limite disponível e limite em uso
+  const isChequeEspecial = limiteChequeEspecial !== null && limiteChequeEspecial > 0;
+  const saldoReal = saldo || 0;
+  
+  const displaySaldo = isChequeEspecial && saldoReal < 0 ? 0 : saldoReal;
+  const limiteEmUso = isChequeEspecial && saldoReal < 0 ? Math.abs(saldoReal) : 0;
+  const limiteDisponivel = isChequeEspecial ? Math.max(0, limiteChequeEspecial - limiteEmUso) : 0;
+
+  const saldoClass = `mr-2 ${saldoReal >= 0 ? "text-green-600 font-bold" : "text-red-600 font-bold"}`;
+  
+
   return (
     <>
       <Card className="banking-terminal">
@@ -388,16 +399,24 @@ export function BankingTransactions() {
                   {/* Lógica de exibição de saldos */}
                   {saldo !== null && (
                     <p className="text-sm mt-1 flex flex-col sm:flex-row sm:items-baseline">
-                      {/* Saldo em Reais */}
-                      <span className={`mr-2 ${saldo >= 0 ? "text-green-600 font-bold" : "text-yellow-600 font-bold"}`}>
-                        Saldo (R$): {Math.max(0, saldo).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                      <span className={saldoClass}>
+                        Saldo em Conta: R${" "}
+                        {displaySaldo.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                       </span>
-                      {limiteChequeEspecial !== null && limiteChequeEspecial > 0 && (
-                        <span className="text-gray-600">
-                          (Limite: R$ {limiteChequeEspecial.toLocaleString("pt-BR", { minimumFractionDigits: 2 })})
+                      {isChequeEspecial && (
+                        <span className="ml-0 mt-1 sm:mt-0 sm:ml-2 text-gray-600 text-sm">
+                          <span>
+                            Limite Disp.: R${" "}
+                            {limiteDisponivel.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                          </span>
+                          {limiteEmUso > 0 && (
+                            <span className="ml-2 text-red-500 font-semibold text-sm">
+                              (Em Uso: R${" "}
+                              {limiteEmUso.toLocaleString("pt-BR", { minimumFractionDigits: 2 })})
+                            </span>
+                          )}
                         </span>
                       )}
-                      {/* Saldo em Dólar (só exibe se existir) */}
                       {saldoDolar !== null && (
                         <span className="ml-0 mt-1 sm:mt-0 sm:ml-2 text-green-600 font-bold">
                           Saldo (US$): {saldoDolar.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}

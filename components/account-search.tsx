@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Search, CreditCard, AlertTriangle, CheckCircle } from "lucide-react"
+import { Search, CreditCard, AlertTriangle, CheckCircle, DollarSign } from "lucide-react"
 import { clienteAPI, contaAPI, formatarCPF, validarCPF } from "@/lib/api"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 
@@ -23,7 +23,7 @@ const formatErrorMessage = (error: any): string => {
   let errorMsg = error?.message || ""
 
   if (errorMsg.includes("404") || errorMsg.toLowerCase().includes("not found")) {
-    errorMessage = "Cliente ou conta não encontrados com o CPF informado."
+    errorMessage = "Cliente ou conta não encontrados com o CPF/número de conta informado."
   } else if (errorMsg) {
     let cleanMessage = errorMsg.replace(/^(Erro ao buscar contas: |Erro: )/i, '').trim()
     cleanMessage = cleanMessage.charAt(0).toUpperCase() + cleanMessage.slice(1)
@@ -34,6 +34,7 @@ const formatErrorMessage = (error: any): string => {
 
 export function AccountSearch() {
   const [cpf, setCpf] = useState("")
+  const [numeroConta, setNumeroConta] = useState("")
   const [loading, setLoading] = useState(false)
   const [contas, setContas] = useState<any[]>([])
   const [clienteNome, setClienteNome] = useState("")
@@ -49,7 +50,7 @@ export function AccountSearch() {
     setFeedback({ show: true, title, message, type })
   }
 
-  const buscarContas = async () => {
+  const buscarContasPorCpf = async () => {
     if (!cpf) {
       showFeedback("Erro de Validação", "Por favor, informe o CPF.", "error")
       return
@@ -61,13 +62,13 @@ export function AccountSearch() {
     }
 
     setLoading(true)
-    setContas([]) // Limpa a lista antes de uma nova busca
-    setClienteNome("") // Limpa o nome do cliente antes de uma nova busca
+    setContas([])
+    setClienteNome("")
+    setNumeroConta("")
 
     try {
       const cpfLimpo = cpf.replace(/\D/g, "")
 
-      // 1. Busca os dados do cliente para exibir o nome
       const cliente = await clienteAPI.buscarPorCpf(cpfLimpo)
       if (!cliente) {
         showFeedback("Cliente Não Encontrado", "Nenhum cliente foi encontrado com o CPF informado.", "error")
@@ -75,15 +76,35 @@ export function AccountSearch() {
       }
       setClienteNome(cliente.nomeCompleto)
 
-      // 2. Chama a API do backend para buscar as contas
       const contasEncontradas = await contaAPI.buscarPorCpf(cpfLimpo)
+      
+      const contasComDetalhes = await Promise.all(
+        contasEncontradas.map(async (conta: any) => {
+          if (conta.tipoConta === 'JOVEM') {
+            try {
+              const responsavelConta = await contaAPI.buscarPorId(conta.responsavelContaId);
+              const responsavelTitular = await clienteAPI.buscarPorCpf(responsavelConta.titularCpfs[0]);
+              const nomeResponsavel = responsavelTitular ? responsavelTitular.nomeCompleto : "Responsável não encontrado";
+              return {
+                ...conta,
+                nomeResponsavel: nomeResponsavel,
+              };
+            } catch (error) {
+              console.error("Erro ao buscar responsável da conta jovem:", error);
+              return {
+                ...conta,
+                nomeResponsavel: "Não encontrado",
+              };
+            }
+          }
+          return conta;
+        })
+      );
+      
+      setContas(contasComDetalhes)
 
-      // 3. Atualiza o estado com as contas encontradas
-      setContas(contasEncontradas)
-
-      // 4. Exibe mensagem de sucesso se contas forem encontradas
-      if (contasEncontradas.length > 0) {
-        showFeedback("Busca Concluída", `Foram encontradas ${contasEncontradas.length} conta(s) para o cliente ${cliente.nomeCompleto}.`, "success")
+      if (contasComDetalhes.length > 0) {
+        showFeedback("Busca Concluída", `Foram encontradas ${contasComDetalhes.length} conta(s) para o cliente ${cliente.nomeCompleto}.`, "success")
       } else {
         showFeedback("Busca Concluída", `Nenhuma conta foi encontrada para o cliente ${cliente.nomeCompleto}.`, "success")
       }
@@ -97,11 +118,73 @@ export function AccountSearch() {
     }
   }
 
+  const buscarContaPorNumero = async () => {
+    if (!numeroConta) {
+      showFeedback("Erro de Validação", "Por favor, informe o número da conta.", "error")
+      return
+    }
+
+    setLoading(true)
+    setContas([])
+    setClienteNome("")
+    setCpf("")
+
+    try {
+      const contaEncontrada = await contaAPI.buscarPorNumeroConta(numeroConta)
+      
+      const titularPrincipal = contaEncontrada.titularCpfs[0]
+      const cliente = await clienteAPI.buscarPorCpf(titularPrincipal.replace(/\D/g, ""))
+
+      let contaComDetalhes = contaEncontrada;
+
+      if (contaEncontrada.tipoConta === 'JOVEM') {
+        const responsavelConta = await contaAPI.buscarPorId(contaEncontrada.responsavelContaId);
+        const responsavelTitular = await clienteAPI.buscarPorCpf(responsavelConta.titularCpfs[0]);
+        const nomeResponsavel = responsavelTitular ? responsavelTitular.nomeCompleto : "Responsável não encontrado";
+        contaComDetalhes = {
+          ...contaEncontrada,
+          nomeResponsavel: nomeResponsavel,
+        };
+      }
+      
+      if (cliente && cliente.nomeCompleto) {
+        setClienteNome(cliente.nomeCompleto)
+      } else {
+        setClienteNome("")
+      }
+
+      setContas([contaComDetalhes])
+
+      showFeedback("Busca Concluída", `Detalhes da conta ${contaEncontrada.numeroConta} encontrados.`, "success")
+
+    } catch (error) {
+      console.error("Erro ao buscar conta por número:", error)
+      showFeedback("Erro na Busca", formatErrorMessage(error), "error")
+      setContas([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const formatarSaldo = (saldo: number) => {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
       currency: "BRL",
     }).format(saldo)
+  }
+
+  const formatarSaldoDolar = (saldo: number) => {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+    }).format(saldo)
+  }
+
+  const formatarTaxaManutencao = (taxa: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(taxa)
   }
 
   return (
@@ -126,10 +209,34 @@ export function AccountSearch() {
                   onChange={(e) => setCpf(formatarCPF(e.target.value))}
                   placeholder="000.000.000-00"
                   maxLength={14}
+                  disabled={loading}
                 />
               </div>
               <div className="flex items-end">
-                <Button onClick={buscarContas} disabled={loading} className="flex items-center space-x-2">
+                <Button onClick={buscarContasPorCpf} disabled={loading} className="flex items-center space-x-2">
+                  <Search className="w-4 h-4" />
+                  <span>Buscar</span>
+                </Button>
+              </div>
+            </div>
+          </div>
+          
+          {/* Nova Seção: Busca por Número da Conta */}
+          <div className="form-section p-4 rounded-lg">
+            <h3 className="text-lg font-semibold mb-4 text-primary">Buscar por Número da Conta</h3>
+            <div className="flex space-x-4">
+              <div className="flex-1">
+                <Label htmlFor="numeroConta">Número da Conta</Label>
+                <Input
+                  id="numeroConta"
+                  value={numeroConta}
+                  onChange={(e) => setNumeroConta(e.target.value)}
+                  placeholder="000000-0"
+                  disabled={loading}
+                />
+              </div>
+              <div className="flex items-end">
+                <Button onClick={buscarContaPorNumero} disabled={loading} className="flex items-center space-x-2">
                   <Search className="w-4 h-4" />
                   <span>Buscar</span>
                 </Button>
@@ -171,8 +278,57 @@ export function AccountSearch() {
                         </div>
                         <div>
                           <Label className="text-xs text-muted-foreground">Saldo</Label>
-                          <p className="font-medium">{formatarSaldo(conta.saldo || conta.saldoDolares || 0)}</p>
+                          <p className="font-medium">{formatarSaldo(conta.saldo)}</p>
                         </div>
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Segmento</Label>
+                          <p className="font-medium">{conta.segmentoCliente}</p>
+                        </div>
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Taxa de Manutenção</Label>
+                          <p className="font-medium">{formatarTaxaManutencao(conta.taxaManutencao)}</p>
+                        </div>
+                        
+                        {/* Atributos Específicos da Conta Corrente */}
+                        {conta.tipoConta === 'CORRENTE' && (
+                          <div>
+                            <Label className="text-xs text-muted-foreground">Limite Cheque Especial</Label>
+                            <p className="font-medium">{formatarSaldo(conta.limiteChequeEspecial)}</p>
+                          </div>
+                        )}
+
+                        {/* Atributos Específicos da Conta Poupança */}
+                        {conta.tipoConta === 'POUPANCA' && (
+                          <>
+                            <div>
+                              <Label className="text-xs text-muted-foreground">Rendimento</Label>
+                              <p className="font-medium">{conta.rendimento}% ao mês</p>
+                            </div>
+                          </>
+                        )}
+                        
+                        {/* Atributos Específicos da Conta Jovem */}
+                        {conta.tipoConta === 'JOVEM' && (
+                          <div>
+                            <Label className="text-xs text-muted-foreground">Responsável</Label>
+                            <p className="font-medium">{conta.nomeResponsavel}</p>
+                          </div>
+                        )}
+                        
+                        {/* Atributos Específicos da Conta Global */}
+                        {conta.tipoConta === 'GLOBAL' && (
+                          <>
+                            <div>
+                              <Label className="text-xs text-muted-foreground">Saldo em Dólar</Label>
+                              <p className="font-medium">{formatarSaldoDolar(conta.saldoDolar)}</p>
+                            </div>
+                            <div>
+                              <Label className="text-xs text-muted-foreground">Código Swift</Label>
+                              <p className="font-medium">{conta.codigoSwift}</p>
+                            </div>
+                          </>
+                        )}
+
                       </div>
                     </div>
                   ))}
