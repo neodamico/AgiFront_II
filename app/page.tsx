@@ -94,16 +94,10 @@ export default function LoginPage() {
               />
             </div>
             {error && <div className="text-destructive text-sm bg-destructive/10 p-3 rounded-md">{error}</div>}
-            <Button type="submit" className="w-full h-12 text-lg" disabled={loading}>
+            <Button type="submit" className="mt-4 w-full h-12 text-lg" disabled={loading}>
               {loading ? "Conectando..." : "Acessar Sistema"}
             </Button>
           </form>
-          <div className="mt-6 text-center text-xs text-muted-foreground">
-            <p className="text-amber-600 font-medium">
-              Importante: Certifique-se de que existe um gerente cadastrado no banco de dados antes de fazer login.
-            </p>
-            <p className="mt-2">Backend deve estar rodando em http://localhost:8080</p>
-          </div>
         </CardContent>
       </Card>
     </div>

@@ -25,8 +25,9 @@ import type {
   SaqueRequest,
   DebitoAutomaticoRequest,
   DebitoAutomaticoResponse,
-  SaqueInternacionalRequest,
-  DepositoInternacionalRequest,
+  ConversaoMoedaResponse,
+  SaqueDolarParaRealRequest,
+ ConversaoMoedaRequest,
 } from "./types"
 
 // A URL base da sua API real
@@ -301,18 +302,25 @@ export const transacaoAPI = {
     })
   },
 
-  realizarSaqueInternacional: async (data: SaqueInternacionalRequest, gerenteExecutorId: number): Promise<TransacaoResponse> => {
+  realizarSaqueInternacional: async (data: SaqueDolarParaRealRequest, gerenteExecutorId: number): Promise<TransacaoResponse> => {
     return fetchAPI<TransacaoResponse>(`/transacoes/saque-internacional?gerenteExecutorId=${gerenteExecutorId}`, {
       method: "POST",
       body: JSON.stringify(data),
-    })
+    });
   },
 
-  realizarDepositoInternacional: async (data: DepositoInternacionalRequest, gerenteExecutorId: number): Promise<TransacaoResponse> => {
-    return fetchAPI<TransacaoResponse>(`/transacoes/deposito-internacional?gerenteExecutorId=${gerenteExecutorId}`, {
+  realizarDepositoInternacional: async (data: ConversaoMoedaRequest, gerenteExecutorId: number): Promise<ConversaoMoedaResponse> => {
+    return fetchAPI<ConversaoMoedaResponse>(`/transacoes/deposito-internacional?gerenteExecutorId=${gerenteExecutorId}`, {
       method: "POST",
       body: JSON.stringify(data),
-    })
+    });
+  },
+
+  realizarConversaoMoeda: async (data: ConversaoMoedaRequest, gerenteExecutorId: number): Promise<ConversaoMoedaResponse> => {
+    return fetchAPI<ConversaoMoedaResponse>(`/transacoes/conversao-moeda?gerenteExecutorId=${gerenteExecutorId}`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
   },
 
   buscarExtrato: async (contaId: number): Promise<TransacaoResponse[]> => {

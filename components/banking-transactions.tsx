@@ -10,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DollarSign, FileText, Lock, X, Search, CheckCircle, AlertTriangle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { api, contaAPI, formatarNumeroConta } from "../lib/api";
-import type { TransacaoResponse, SaqueRequest, DepositoRequest, TransferenciaRequest, SaqueInternacionalRequest, DepositoInternacionalRequest } from "../lib/types";
+import type { TransacaoResponse, SaqueRequest, DepositoRequest, TransferenciaRequest, SaqueDolarParaRealRequest, ConversaoMoedaRequest, ConversaoMoedaResponse } from "../lib/types";
+import { TipoTransacao } from "../lib/types";
 
 // --- Tipos de Transação ---
 type TransacaoTipo = "saque" | "deposito" | "transferencia" | "saque_internacional" | "deposito_internacional";
@@ -18,10 +19,11 @@ type TransacaoTipo = "saque" | "deposito" | "transferencia" | "saque_internacion
 // Tipo auxiliar para armazenar dados da transação antes da confirmação de senha
 interface TransactionPayload {
   tipoTransacao: TransacaoTipo;
-  contaOrigemId: number;
+  contaId: number;
   contaDestinoId?: number;
   valor: number;
   motivoMovimentacao: string;
+  senha?: string;
 }
 
 // Tipo para o modal de feedback
@@ -35,10 +37,8 @@ interface FeedbackState {
 // Função utilitária para formatar mensagens de erro do backend para serem amigáveis ao usuário.
 const formatErrorMessage = (error: any): string => {
   let errorMessage = "Ocorreu uma falha inesperada. Tente novamente.";
-  // Tenta extrair a mensagem de erro da resposta JSON se existir, ou usa a string de erro
   let errorMsg = error?.message || '';
 
-  // Tenta extrair a mensagem do corpo da resposta JSON da API, que pode vir como string
   if (errorMsg.startsWith('{') && errorMsg.endsWith('}')) {
     try {
       const errorJson = JSON.parse(errorMsg);
@@ -54,11 +54,11 @@ const formatErrorMessage = (error: any): string => {
     errorMessage = "Conta não encontrada com o número informado.";
   } else if (errorMsg.toLowerCase().includes("saldo insuficiente")) {
     errorMessage = "Saldo insuficiente para realizar esta transação.";
-    // Tratamento específico para saldo em dólar insuficiente
   } else if (errorMsg.toLowerCase().includes("saldo em dólares insuficiente")) {
     errorMessage = "Saldo em dólares (US$) insuficiente na conta global para realizar o saque.";
+  } else if (errorMsg.toLowerCase().includes("somente contas globais")) {
+    errorMessage = "Essa operação é exclusiva para contas globais.";
   } else if (errorMsg) {
-    // Tenta limpar a mensagem de erro padrão da API, removendo prefixos técnicos
     let cleanMessage = errorMsg.replace(/^(Erro ao processar transação: |Falha na validação dos dados: |Erro: )/i, '').trim();
     cleanMessage = cleanMessage.charAt(0).toUpperCase() + cleanMessage.slice(1);
     errorMessage = cleanMessage.length > 5 ? cleanMessage : errorMessage;
@@ -72,27 +72,20 @@ export function BankingTransactions() {
     tipoTransacao: "" as TransacaoTipo | "",
     numeroConta: "",
     valor: "",
-    senha: "", // Senha será usada apenas no modal/momento da transação
+    senha: "",
     numeroContaDestino: "",
     motivoMovimentacao: "",
   });
 
   const [saldo, setSaldo] = useState<number | null>(null);
-  // Estado para armazenar o limite do cheque especial
+  const [saldoDolar, setSaldoDolar] = useState<number | null>(null);
   const [limiteChequeEspecial, setLimiteChequeEspecial] = useState<number | null>(null);
-  // O TransacaoResponse precisa ser atualizado externamente para incluir os novos tipos de transação (SAQUE_INTERNACIONAL, DEPOSITO_INTERNACIONAL)
   const [extrato, setExtrato] = useState<TransacaoResponse[]>([]);
   const [showExtrato, setShowExtrato] = useState(false);
   const [loading, setLoading] = useState(false);
-
-  // Estado para filtrar o extrato pelo NSU
   const [nsuFiltro, setNsuFiltro] = useState("");
-
-  // Estados para o Modal de Confirmação de Senha
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [pendingPayload, setPendingPayload] = useState<TransactionPayload | null>(null);
-
-  // NOVO ESTADO: Para o modal de feedback
   const [feedback, setFeedback] = useState<FeedbackState>({
     show: false,
     title: "",
@@ -116,15 +109,16 @@ export function BankingTransactions() {
       motivoMovimentacao: "",
     });
     setSaldo(null);
-    setLimiteChequeEspecial(null); 
+    setSaldoDolar(null);
+    setLimiteChequeEspecial(null);
     setShowExtrato(false);
     setPendingPayload(null);
     setShowPasswordModal(false);
-    setNsuFiltro(""); 
+    setNsuFiltro("");
   };
 
 
-  const consultarSaldo = async () => {
+  const consultarSaldos = async () => {
     if (!transactionData.numeroConta) {
       showFeedback("Erro de Validação", "Por favor, informe o número da conta para consultar o saldo.", "error");
       return;
@@ -134,18 +128,17 @@ export function BankingTransactions() {
     try {
       const numeroLimpo = transactionData.numeroConta.replace(/\D/g, "");
       const numeroFormatado = formatarNumeroConta(numeroLimpo);
-
-      // Buscamos a conta completa, assumindo que ela contém saldo e limite
       const contaDetalhes = await api.contas.buscarPorNumeroConta(numeroFormatado);
 
       setSaldo(contaDetalhes.saldo);
-      // Assumimos que a resposta contém 'limiteChequeEspecial', usando 0 como fallback se não existir
+      setSaldoDolar(contaDetalhes.saldoDolar || null);
       setLimiteChequeEspecial(contaDetalhes.limiteChequeEspecial || 0);
 
     } catch (error: any) {
       showFeedback("Erro ao Consultar Saldo", formatErrorMessage(error), "error");
       setSaldo(null);
-      setLimiteChequeEspecial(null); // Limpa o limite em caso de erro
+      setSaldoDolar(null);
+      setLimiteChequeEspecial(null);
     } finally {
       setLoading(false);
     }
@@ -165,7 +158,7 @@ export function BankingTransactions() {
       const extratoData = await api.transacoes.buscarExtrato(conta.id);
       setExtrato(extratoData);
       setShowExtrato(true);
-      setNsuFiltro(""); // Reseta o filtro ao carregar novo extrato
+      setNsuFiltro("");
 
     } catch (error: any) {
       showFeedback("Erro ao Consultar Extrato", formatErrorMessage(error), "error");
@@ -175,9 +168,7 @@ export function BankingTransactions() {
     }
   };
 
-  // Funçao que será chamada após a senha ser confirmada no Modal
   const handleFinalSubmission = async () => {
-    // Validação da senha no frontend (complementa a validação do backend)
     if (!pendingPayload || !transactionData.senha || transactionData.senha.length !== 6 || !/^\d{6}$/.test(transactionData.senha)) {
       showFeedback("Erro de Validação", "A senha deve conter exatamente 6 dígitos numéricos.", "error");
       return;
@@ -193,64 +184,51 @@ export function BankingTransactions() {
 
     try {
       let response;
-      const valor = pendingPayload.valor;
-      const senha = transactionData.senha;
       let title = "";
       let description = "";
 
-      // Monta o payload final com a senha para transações nacionais
-      const finalPayloadNacional = {
+      // Payload base para transações que exigem senha
+      const payload = {
+        valor: pendingPayload.valor,
+        senha: transactionData.senha,
         motivoMovimentacao: pendingPayload.motivoMovimentacao,
-        senha: senha,
-        valor: valor,
       };
 
       switch (pendingPayload.tipoTransacao) {
         case "saque":
-          response = await api.transacoes.realizarSaque(
-            { contaId: pendingPayload.contaOrigemId, ...finalPayloadNacional },
-            Number.parseInt(gerenteId)
-          );
+          response = await api.transacoes.realizarSaque({ contaId: pendingPayload.contaId, ...payload } as SaqueRequest, Number.parseInt(gerenteId));
           title = "Saque Concluído";
-          description = `Saque de R$ ${valor.toFixed(2)} realizado com sucesso! NSU: ${response.nsUnico}`;
+          description = `Saque de R$ ${pendingPayload.valor.toFixed(2)} realizado com sucesso! NSU: ${response.nsUnico}`;
           break;
 
         case "transferencia":
           response = await api.transacoes.realizarTransferencia(
             {
-              contaOrigemId: pendingPayload.contaOrigemId,
+              contaOrigemId: pendingPayload.contaId,
               contaDestinoId: pendingPayload.contaDestinoId!,
-              ...finalPayloadNacional
-            },
+              ...payload,
+            } as TransferenciaRequest,
             Number.parseInt(gerenteId)
           );
           title = "Transferência Concluída";
-          description = `Transferência de R$ ${valor.toFixed(2)} realizada com sucesso! NSU: ${response.nsUnico}`;
+          description = `Transferência de R$ ${pendingPayload.valor.toFixed(2)} realizada com sucesso! NSU: ${response.nsUnico}`;
           break;
 
         case "saque_internacional":
-          // Saque Internacional: O payload usa valorDolares
-          const finalPayloadSaqueInternacional: SaqueInternacionalRequest = {
-            motivoMovimentacao: pendingPayload.motivoMovimentacao,
-            valorDolares: valor,
-            contaId: pendingPayload.contaOrigemId,
+          const saqueInternacionalPayload: SaqueDolarParaRealRequest = {
+            contaId: pendingPayload.contaId,
+            valorReais: pendingPayload.valor,
+            senha: transactionData.senha,
+            motivoMovimentacao: pendingPayload.motivoMovimentacao
           };
-
-          response = await api.transacoes.realizarSaqueInternacional(
-            finalPayloadSaqueInternacional,
-            Number.parseInt(gerenteId)
-          );
-
+          response = await api.transacoes.realizarSaqueInternacional(saqueInternacionalPayload, Number.parseInt(gerenteId));
           title = "Saque Internacional Concluído";
-          description = `Saque de US$ ${valor.toFixed(2)} realizado com sucesso! NSU: ${response.nsUnico}`;
+          description = `Saque de R$ ${pendingPayload.valor.toFixed(2)} realizado com sucesso, debitado do saldo em dólar. NSU: ${response.nsUnico}`;
           break;
       }
 
-      // Exibe modal de sucesso
       showFeedback(title, description, "success");
-
-      // Após a transação, consulte o saldo novamente para refletir a alteração
-      consultarSaldo();
+      consultarSaldos();
       resetForm();
 
     } catch (error: any) {
@@ -259,15 +237,13 @@ export function BankingTransactions() {
     } finally {
       setLoading(false);
       setShowPasswordModal(false);
-      setTransactionData({ ...transactionData, senha: "" }); // Limpa a senha
+      setTransactionData({ ...transactionData, senha: "" });
     }
   };
 
-  // Funçao que prepara o payload e controla o fluxo de Deposito vs. Confirmação
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validação do Motivo de Movimentação (75 caracteres)
     const MAX_CHARS_MOTIVO = 75;
     if (transactionData.motivoMovimentacao.length > MAX_CHARS_MOTIVO) {
       showFeedback("Erro de Validação", "O motivo da movimentação não pode exceder 75 caracteres.", "error");
@@ -291,82 +267,72 @@ export function BankingTransactions() {
       const valor = Number.parseFloat(transactionData.valor);
       const numeroLimpo = transactionData.numeroConta.replace(/\D/g, "");
       const numeroFormatado = formatarNumeroConta(numeroLimpo);
-      // Busca a conta de origem para pegar o ID E O TIPO DE CONTA
       const conta = await api.contas.buscarPorNumeroConta(numeroFormatado);
 
       const isSaqueInternacional = transactionData.tipoTransacao === "saque_internacional";
       const isDepositoInternacional = transactionData.tipoTransacao === "deposito_internacional";
       const isTransacaoInternacional = isSaqueInternacional || isDepositoInternacional;
 
-      // LÓGICA DE VALIDAÇÃO: Adição da validação de tipo de conta para transações internacionais
-      if (isTransacaoInternacional && conta.tipoConta !== "GLOBAL") { // Contas Internacionais são do tipo GLOBAL
+      if (isTransacaoInternacional && conta.tipoConta !== "GLOBAL") {
         showFeedback("Operação Não Permitida", "Saques e depósitos internacionais só podem ser realizados em contas globais (internacionais).", "error");
         setLoading(false);
         return;
       }
 
-      let contaDestino;
+      const payloadBase: TransactionPayload = {
+        tipoTransacao: transactionData.tipoTransacao,
+        contaId: conta.id,
+        valor,
+        motivoMovimentacao: transactionData.motivoMovimentacao,
+      };
+
       if (transactionData.tipoTransacao === "transferencia") {
         if (!transactionData.numeroContaDestino) {
           showFeedback("Erro de Validação", "Por favor, informe a conta de destino para a transferência.", "error");
-          setLoading(false);
           return;
         }
         const numeroDestinoLimpo = transactionData.numeroContaDestino.replace(/\D/g, "");
         const numeroDestinoFormatado = formatarNumeroConta(numeroDestinoLimpo);
-        contaDestino = await api.contas.buscarPorNumeroConta(numeroDestinoFormatado);
+        const contaDestino = await api.contas.buscarPorNumeroConta(numeroDestinoFormatado);
+        payloadBase.contaDestinoId = contaDestino.id;
       }
 
-      // --- Prepara o Payload Base ---
-      const basePayload: TransactionPayload = {
-        tipoTransacao: transactionData.tipoTransacao,
-        valor,
-        motivoMovimentacao: transactionData.motivoMovimentacao,
-        contaOrigemId: conta.id, // Para Saque/Transferência/Internacional
-      };
-
-      if (transactionData.tipoTransacao === "transferencia" && contaDestino) {
-        basePayload.contaDestinoId = contaDestino.id;
-      }
-
-      // --- Executa ou Prepara a Confirmação ---
-
+      // DEPÓSITO NACIONAL: Não exige senha, executa diretamente
       if (transactionData.tipoTransacao === "deposito") {
-        // DEPÓSITO NACIONAL: Não exige senha, executa diretamente
         const response = await api.transacoes.realizarDeposito(
-          { contaId: conta.id, valor, senha: "", motivoMovimentacao: transactionData.motivoMovimentacao },
+          { contaId: conta.id, valor, senha: "", motivoMovimentacao: transactionData.motivoMovimentacao } as DepositoRequest,
           Number.parseInt(gerenteId)
         );
-
         showFeedback("Depósito Concluído", `Depósito de R$ ${valor.toFixed(2)} realizado com sucesso! NSU: ${response.nsUnico}`, "success");
-
-        consultarSaldo();
+        consultarSaldos();
         resetForm();
+        return;
 
-      } else if (isDepositoInternacional) {
-        // DEPÓSITO INTERNACIONAL: Não exige senha, executa diretamente
-        // O valor do frontend (em US$) é mapeado para 'valorDolares' na API
-        const finalPayloadDepositoInternacional: DepositoInternacionalRequest = {
+      }
+
+      // DEPÓSITO INTERNACIONAL: Não exige senha, executa diretamente
+      if (isDepositoInternacional) {
+        const depositoInternacionalPayload: ConversaoMoedaRequest = {
           contaId: conta.id,
-          valorDolares: valor,
+          valorReais: valor, // A API espera valor em Reais para a conversão
           motivoMovimentacao: transactionData.motivoMovimentacao
         };
-
         const response = await api.transacoes.realizarDepositoInternacional(
-          finalPayloadDepositoInternacional,
+          depositoInternacionalPayload,
           Number.parseInt(gerenteId)
         );
 
-        showFeedback("Depósito Internacional Concluído", `Depósito de US$ ${valor.toFixed(2)} realizado com sucesso! NSU: ${response.nsUnico}`, "success");
+        showFeedback("Depósito Internacional Concluído", `Depósito de US$ ${response.valorDolares?.toFixed(2)} realizado com sucesso, com base em um depósito de R$ ${response.valorReais?.toFixed(2)}! NSU: ${response.nsuOperacao}`, "success");
 
-        consultarSaldo();
+        consultarSaldos();
         resetForm();
-
-      } else {
-        // SAQUE / TRANSFERÊNCIA / SAQUE INTERNACIONAL: Requer senha, abre o modal
-        setPendingPayload(basePayload);
-        setShowPasswordModal(true);
+        return;
       }
+
+      // SAQUE / TRANSFERÊNCIA / SAQUE INTERNACIONAL: Requer senha, abre o modal
+      setPendingPayload(payloadBase);
+      setShowPasswordModal(true);
+
     } catch (error: any) {
       showFeedback("Falha na Pré-Transação", formatErrorMessage(error), "error");
     } finally {
@@ -380,7 +346,6 @@ export function BankingTransactions() {
   const isDepositoInternacional = transactionData.tipoTransacao === "deposito_internacional";
   const isTransacaoInternacional = isSaqueInternacional || isDepositoInternacional;
 
-  // Função para filtrar as transações
   const transacoesFiltradas = extrato.filter(transacao =>
     transacao.nsUnico.toLowerCase().includes(nsuFiltro.toLowerCase())
   );
@@ -416,52 +381,28 @@ export function BankingTransactions() {
                       maxLength={8}
                       required
                     />
-                    {isSaque && (
-                      <Button type="button" onClick={consultarSaldo} disabled={loading} size="sm">
-                        Ver Saldo
-                      </Button>
-                    )}
+                    <Button type="button" onClick={consultarSaldos} disabled={loading} size="sm">
+                      Ver Saldo
+                    </Button>
                   </div>
-                  {/* Lógica de exibição de saldo e cheque especial (apenas para saque nacional) */}
-                  {saldo !== null && isSaque && (
+                  {/* Lógica de exibição de saldos */}
+                  {saldo !== null && (
                     <p className="text-sm mt-1 flex flex-col sm:flex-row sm:items-baseline">
-                      {(() => {
-                        const limiteTotal = limiteChequeEspecial ?? 0;
-                        const limiteEmUso = saldo < 0 ? Math.abs(saldo) : 0;
-                        const limiteDisponivel = limiteTotal - limiteEmUso;
-                        const displaySaldo = saldo < 0 ? 0 : saldo;
-
-                        // Determina a classe de cor principal (Verde para saldo positivo, Amarelo/Laranja para usando o limite)
-                        const saldoClass = saldo >= 0 ? "text-green-600 font-bold" : "text-yellow-600 font-bold";
-
-                        return (
-                          <>
-                            {/* Saldo em Conta (Exibe 0,00 se negativo) */}
-                            <span className={saldoClass}>
-                              Saldo em Conta: R${" "}
-                              {displaySaldo.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                            </span>
-
-                            {limiteTotal > 0 && (
-                              <span className="ml-0 mt-1 sm:mt-0 sm:ml-2 text-gray-600 text-sm">
-                                {/* Limite Disponível */}
-                                <span>
-                                  Limite Disp.: R${" "}
-                                  {Math.max(0, limiteDisponivel).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                                </span>
-
-                                {/* Limite em Uso (Mostra apenas se o limite estiver sendo usado) */}
-                                {limiteEmUso > 0 && (
-                                  <span className="ml-2 text-red-500 font-semibold text-sm">
-                                    (Em Uso: R${" "}
-                                    {limiteEmUso.toLocaleString("pt-BR", { minimumFractionDigits: 2 })})
-                                  </span>
-                                )}
-                              </span>
-                            )}
-                          </>
-                        );
-                      })()}
+                      {/* Saldo em Reais */}
+                      <span className={`mr-2 ${saldo >= 0 ? "text-green-600 font-bold" : "text-yellow-600 font-bold"}`}>
+                        Saldo (R$): {Math.max(0, saldo).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                      </span>
+                      {limiteChequeEspecial !== null && limiteChequeEspecial > 0 && (
+                        <span className="text-gray-600">
+                          (Limite: R$ {limiteChequeEspecial.toLocaleString("pt-BR", { minimumFractionDigits: 2 })})
+                        </span>
+                      )}
+                      {/* Saldo em Dólar (só exibe se existir) */}
+                      {saldoDolar !== null && (
+                        <span className="ml-0 mt-1 sm:mt-0 sm:ml-2 text-green-600 font-bold">
+                          Saldo (US$): {saldoDolar.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                        </span>
+                      )}
                     </p>
                   )}
                 </div>
@@ -490,7 +431,7 @@ export function BankingTransactions() {
 
                 {/* VALOR (R$ ou US$) */}
                 <div>
-                  <Label htmlFor="valor">Valor ({isTransacaoInternacional ? "US$" : "R$"}) *</Label>
+                  <Label htmlFor="valor">Valor R$ *</Label>
                   <Input
                     id="valor"
                     type="number"
@@ -516,7 +457,6 @@ export function BankingTransactions() {
                       <SelectItem value="saque">Saque (R$)</SelectItem>
                       <SelectItem value="deposito">Depósito (R$)</SelectItem>
                       <SelectItem value="transferencia">Transferência (R$)</SelectItem>
-                      {/* NOVAS TRANSAÇÕES INTERNACIONAIS */}
                       <SelectItem value="saque_internacional">Saque Internacional (US$)</SelectItem>
                       <SelectItem value="deposito_internacional">Depósito Internacional (US$)</SelectItem>
                     </SelectContent>
@@ -531,9 +471,8 @@ export function BankingTransactions() {
                     value={transactionData.motivoMovimentacao}
                     onChange={(e) => setTransactionData({ ...transactionData, motivoMovimentacao: e.target.value })}
                     placeholder="Opcional (obrigatório para valores acima de R$ 10.000 ou US$ 2.000)"
-                    maxLength={MAX_CHARS_MOTIVO} // Limite de 75 caracteres
+                    maxLength={MAX_CHARS_MOTIVO}
                   />
-                  {/* Contador de Caracteres */}
                   <p className={`text-xs text-right mt-1 ${transactionData.motivoMovimentacao.length === MAX_CHARS_MOTIVO ? 'text-red-500 font-semibold' : 'text-muted-foreground'}`}>
                     {transactionData.motivoMovimentacao.length}/{MAX_CHARS_MOTIVO} caracteres
                   </p>
@@ -547,7 +486,6 @@ export function BankingTransactions() {
                 <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
                   <h3 className="text-lg font-semibold text-primary">Extrato Bancário</h3>
                   <div className="flex items-center space-x-2">
-                    {/* CAMPO DE BUSCA POR NSU */}
                     {showExtrato && extrato.length > 0 && (
                       <div className="relative">
                         <Input
@@ -580,57 +518,41 @@ export function BankingTransactions() {
                           : "Nenhuma transação encontrada."}
                       </p>
                     ) : (
-                      extrato.filter(transacao =>
-                        transacao.nsUnico.toLowerCase().includes(nsuFiltro.toLowerCase())
-                      ).map((transacao) => { // Usando o array filtrado
-                        // Obtém o número da conta consultada
+                      transacoesFiltradas.map((transacao) => {
                         const numeroContaLimpo = transactionData.numeroConta.replace(/\D/g, "");
                         const numeroContaFormatado = formatarNumeroConta(numeroContaLimpo);
 
-                        // LÓGICA: Determina qual conta exibir para TRANSFERENCIA
+                        // Aqui está a mudança: Mantenha as variáveis com valores fixos.
+                        const currencySymbol = "R$";
+                        const displayValue = transacao.valor;
+
                         let contaRelacionada: string | undefined = undefined;
                         let contaLabel = "";
 
-                        if (transacao.tipo === "TRANSFERENCIA") {
-                          // Se a conta destino é a conta consultada, significa que RECEBEU
+                        if (transacao.tipo === TipoTransacao.TRANSFERENCIA) {
                           if (transacao.numeroContaDestino === numeroContaFormatado) {
                             contaRelacionada = transacao.numeroContaOrigem;
                             contaLabel = "Origem";
-                          }
-                          // Se a conta origem é a conta consultada, significa que ENVIOU
-                          else if (transacao.numeroContaOrigem === numeroContaFormatado) {
+                          } else if (transacao.numeroContaOrigem === numeroContaFormatado) {
                             contaRelacionada = transacao.numeroContaDestino;
                             contaLabel = "Destino";
                           }
                         }
 
-                        // Determina se a transação é uma entrada
-                        // Os tipos de transacao do extrato vêm em UPPERCASE do backend (Enums)
-                        const transacaoTipoUpper = transacao.tipo.toUpperCase();
                         const isEntrada =
-                          transacaoTipoUpper === "DEPOSITO" ||
-                          transacaoTipoUpper === "DEPOSITO_INTERNACIONAL" ||
-                          transacaoTipoUpper === "TRANSFERENCIA_RECEBIDA" || // Incluindo recebida
-                          (transacaoTipoUpper === "TRANSFERENCIA" && transacao.numeroContaDestino === numeroContaFormatado);
-
-                        // Determina se a moeda é Dólar
-                        const isDolar = transacaoTipoUpper === "SAQUE_INTERNACIONAL" || transacaoTipoUpper === "DEPOSITO_INTERNACIONAL";
-                        const currencySymbol = isDolar ? "US$" : "R$";
-
+                          [TipoTransacao.DEPOSITO, TipoTransacao.DEPOSITO_INTERNACIONAL, TipoTransacao.CONVERSAO_MOEDA].includes(transacao.tipo) ||
+                          (transacao.tipo === TipoTransacao.TRANSFERENCIA && transacao.numeroContaDestino === numeroContaFormatado);
 
                         return (
                           <div key={transacao.id} className="border rounded-lg p-3">
                             <div className="flex justify-between items-start">
                               <div>
-                                <p className="font-semibold">{transacao.tipo.replace('_', ' ')}</p>
-
-                                {/* Exibe a conta relacionada */}
+                                <p className="font-semibold">{transacao.tipo.replace(/_/g, ' ')}</p>
                                 {contaRelacionada && (
                                   <p className="text-xs text-muted-foreground">
                                     Conta {contaLabel}: {contaRelacionada}
                                   </p>
                                 )}
-
                                 <p className="text-sm text-muted-foreground">
                                   {new Date(transacao.dataHora).toLocaleString("pt-BR")}
                                 </p>
@@ -646,8 +568,7 @@ export function BankingTransactions() {
                               >
                                 {isEntrada ? "+" : "-"}
                                 {currencySymbol}{" "}
-                                {/* Math.abs() para garantir que o valor seja sempre positivo antes de formatar */}
-                                {Math.abs(transacao.valor).toLocaleString("pt-BR", {
+                                {Math.abs(displayValue).toLocaleString("pt-BR", {
                                   minimumFractionDigits: 2,
                                 })}
                               </p>
@@ -673,7 +594,7 @@ export function BankingTransactions() {
               <Button
                 type="submit"
                 className="bg-primary hover:bg-primary/90"
-                disabled={loading || transactionData.motivoMovimentacao.length > MAX_CHARS_MOTIVO} // Adicionado verificação de limite
+                disabled={loading || transactionData.motivoMovimentacao.length > MAX_CHARS_MOTIVO}
               >
                 {loading ? "Processando..." : "Processar Transação"}
               </Button>
@@ -693,12 +614,7 @@ export function BankingTransactions() {
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <p className="text-sm text-muted-foreground">
-              {pendingPayload?.tipoTransacao === 'saque_internacional'
-                ? 'Por favor, insira a senha da conta para realizar o Saque Internacional.'
-                : pendingPayload?.tipoTransacao === 'saque'
-                  ? 'Por favor, insira a senha da conta para realizar o Saque.'
-                  : 'Por favor, insira a senha da conta de origem para confirmar a Transferência.'
-              }
+              Por favor, insira a senha da conta para confirmar a transação.
             </p>
             <div className="grid gap-2">
               <Label htmlFor="modal-senha">Senha da Conta *</Label>
